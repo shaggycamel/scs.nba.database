@@ -71,11 +71,18 @@ docker build -t scs.nba.database:latest .
 so nothing secret is in the image. It keeps the container after the run (no `--rm`) so
 `docker logs update_tables` works until the next run, and it propagates the exit status.
 
-Crontab — cron has no `PATH`, which is why `cron.sh` sets one:
+Crontab — cron has no `PATH` (which is why `cron.sh` sets one) and `CRON_TZ` fixes the
+zone the hours are read in:
 
 ```cron
-0  3 * * *  /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
-0 */6 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+CRON_TZ=Pacific/Auckland
+
+# daily, 02:00 NZ
+0 2 * * *       /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+
+# intraday, every 3h across two windows (17:00-23:00 and 05:00-14:00 NZ)
+0 17-23/3 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+0 5-14/3  * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 ```
 
 No environment setup needed — `cron.sh` reads `~/.config/scs_hub_credentials.ini` (or
