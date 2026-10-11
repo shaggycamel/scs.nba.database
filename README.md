@@ -5,6 +5,8 @@ Scheduled table updates for the NBA / fantasy database.
 `__main__.py` reads `util.update_schedule`, calls each row's `associated_function` on a
 [scs-hub](https://github.com/shaggycamel/scs.scs_hub) `SportsHub`, writes one row per
 table to `util.update_log`, emails any failures, and exits non-zero if anything failed.
+Each `util.update_log` row records the run's `cadence` — the argument that selected it,
+or `all` for a bare run.
 
 ```
 python __main__.py                 # every table where pause IS FALSE
@@ -84,6 +86,12 @@ Run frequency is otherwise driven from the database: `util.update_schedule.caden
 selects which run picks up a row, and `util.update_schedule.pause` excludes it from
 every run (including a bare `./cron.sh`). The `cadence` column is mirrored in
 `sql/tables/util.update_schedule.sql`.
+
+That same argument is written to `util.update_log.cadence` on every row a run inserts
+(`all` for a bare `./cron.sh`). The column is added by rebuilding the table —
+`sql/tables/util.update_log.sql`, run against postgres only (a rebuild is required because
+no dialect here can place a column at a position). Cockroach is then overwritten from
+postgres, which recreates the table in the same column order.
 
 ## Notes on the image
 

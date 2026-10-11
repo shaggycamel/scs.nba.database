@@ -86,15 +86,21 @@ log.info('Writing to database: %s', DB_CON)
 
 log_write_errors = []
 
+# Set in main() from the cron.sh argument; 'all' when none was given.
+run_cadence = 'all'
+
 
 def log_event(table_name, success, error=None):
     """Write one row to util.update_log. A failed write doesn't stop the run,
-    but it is recorded and makes the run exit non-zero and send an alert."""
+    but it is recorded and makes the run exit non-zero and send an alert.
+
+    Each row carries run_cadence, the argument that selected this run."""
     try:
         df = DataFrame(
             {
                 'table_name': table_name,
                 'process_date': datetime.now(NZ),
+                'cadence': run_cadence,
                 'successful_run': success,
                 'error_message': error,
             }
@@ -153,8 +159,6 @@ def send_alert(failures):
 
 
 def main():
-    log_event('process start', True)
-
     # Optional cadence filters; '-f' is ignored (legacy interactive flag)
     # ipykernel (Positron/Jupyter consoles) passes '-f <connection file>' in argv;
     # drop the flag AND its value so the kernel file isn't read as a cadence.
@@ -169,6 +173,12 @@ def main():
         else:
             args.append(a)
     cadences = list(dict.fromkeys(c.strip() for a in args for c in a.split(',') if c.strip()))
+
+    # Recorded on every util.update_log row this run writes.
+    global run_cadence
+    run_cadence = ','.join(cadences) if cadences else 'all'
+
+    log_event('process start', True)
 
     try:
         if cadences:
