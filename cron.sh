@@ -21,6 +21,11 @@ CONTAINER_NAME='update_tables'
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="${SCS_HUB_CREDENTIALS:-$HOME/.config/scs_hub_credentials.ini}"
 
+# Credentials section __main__.py writes through (a write-capable section). Passed
+# as the DB_CON override rather than an ini key, so the same file serves everywhere.
+DB_CON="${DB_CON:-cockroach-write}"
+export DB_CON
+
 # util.update_log.source: this repo's name, from the checkout's origin (survives
 # renames/forks), falling back to the canonical name when git or the remote is
 # unavailable. Mirrors scs.nba.fty.league_dash's deploy/cron.sh.
@@ -66,6 +71,7 @@ fi
 docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1
 docker run --name "$CONTAINER_NAME" \
     -v "$CONFIG_FILE:/root/.config/scs_hub_credentials.ini:ro" \
+    -e DB_CON="$DB_CON" \
     -e UPDATE_LOG_SOURCE="$UPDATE_LOG_SOURCE" \
     -e UPDATE_LOG_KICKOFF="$UPDATE_LOG_KICKOFF" \
     "$IMAGE_NAME" "$@"
