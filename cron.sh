@@ -21,6 +21,20 @@ CONTAINER_NAME='update_tables'
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="${SCS_HUB_CREDENTIALS:-$HOME/.config/scs_hub_credentials.ini}"
 
+# util.update_log.source: this repo's name, from the checkout's origin (survives
+# renames/forks), falling back to the canonical name when git or the remote is
+# unavailable. Mirrors scs.nba.fty.league_dash's deploy/cron.sh.
+_remote="$(git -C "$SCRIPT_DIR" config --get remote.origin.url 2>/dev/null)"
+_repo="${_remote##*/}"
+_repo="${_repo%.git}"
+UPDATE_LOG_SOURCE="${UPDATE_LOG_SOURCE:-${_repo:-scs.nba.database}}"
+export UPDATE_LOG_SOURCE
+
+# util.update_log.job_kickoff: the run's start, identical on every row of one run
+# so a run can be grouped.
+UPDATE_LOG_KICKOFF="${UPDATE_LOG_KICKOFF:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+export UPDATE_LOG_KICKOFF
+
 # Serialise runs. Cron ticks can overlap when a run is slow, and the `docker rm -f`
 # below would then kill the in-flight container mid-write. Wait up to an hour for the
 # lock (so a normal overrun simply queues), then give up rather than pile up more.
@@ -52,6 +66,8 @@ fi
 docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1
 docker run --name "$CONTAINER_NAME" \
     -v "$CONFIG_FILE:/root/.config/scs_hub_credentials.ini:ro" \
+    -e UPDATE_LOG_SOURCE="$UPDATE_LOG_SOURCE" \
+    -e UPDATE_LOG_KICKOFF="$UPDATE_LOG_KICKOFF" \
     "$IMAGE_NAME" "$@"
 status=$?
 

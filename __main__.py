@@ -89,25 +89,35 @@ log_write_errors = []
 # Set in main() from the cron.sh argument; 'all' when none was given.
 run_cadence = 'all'
 
+# Both injected by cron.sh; the fallbacks keep a bare local `python __main__.py`
+# working. source names the writing repo, run_kickoff is this run's start -- the
+# same value on every row the run writes, so a run can be grouped.
+source = os.environ.get('UPDATE_LOG_SOURCE', 'scs.nba.database')
+_kickoff = os.environ.get('UPDATE_LOG_KICKOFF')
+run_kickoff = datetime.fromisoformat(_kickoff) if _kickoff else datetime.now(NZ)
 
-def log_event(table_name, success, error=None):
+
+def log_event(task, success, error=None):
     """Write one row to util.update_log. A failed write doesn't stop the run,
     but it is recorded and makes the run exit non-zero and send an alert.
 
-    Each row carries run_cadence, the argument that selected this run."""
+    Each row carries run_cadence (the argument that selected this run), source
+    (the writing repo) and run_kickoff (this run's start, shared by every row)."""
     try:
         df = DataFrame(
             {
-                'table_name': table_name,
-                'process_date': datetime.now(NZ),
+                'source': source,
+                'job_kickoff': run_kickoff,
                 'cadence': run_cadence,
-                'successful_run': success,
+                'task': task,
+                'task_time': datetime.now(NZ),
+                'success': success,
                 'error_message': error,
             }
         )
         hub.db.write(df, 'update_log', 'util')
     except Exception as e:
-        log.exception('could not write update_log row for %s', table_name)
+        log.exception('could not write update_log row for %s', task)
         log_write_errors.append(str(e))
 
 

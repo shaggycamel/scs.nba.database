@@ -100,7 +100,11 @@ rebuilds the table so its column order (… `cadence`, `schema_sequence`, `funct
 `pause`) is reproduced — no dialect here can place a column at a position.
 
 That same argument is written to `util.update_log.cadence` on every row a run inserts
-(`all` for a bare `./cron.sh`). The column is added by rebuilding the table —
+(`all` for a bare `./cron.sh`). Each row also carries `source` — the repo that wrote it,
+derived from the checkout's git remote (`scs.nba.database` here, `scs.nba.fty.league_dash`
+from the dashboard) — and `job_kickoff`, the run's start time, identical on every row of
+one run so a run can be grouped. Both are set in `cron.sh` (env-overridable) and passed
+into the container. The columns are established by rebuilding the table —
 `sql/tables/util.update_log.sql`, run against postgres only (a rebuild is required because
 no dialect here can place a column at a position). Cockroach is then overwritten from
 postgres, which recreates the table in the same column order.
