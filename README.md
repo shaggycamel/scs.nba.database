@@ -16,7 +16,10 @@ python __main__.py daily intraday  # same; space- or comma-separated
 
 Each row's `cadence` names the run it belongs to: `./cron.sh daily` picks up every
 unpaused row with `cadence = 'daily'`, and a bare `./cron.sh` ignores cadence entirely.
-Rows run once each, in a single `ORDER BY table_name DESC`, with no per-cadence grouping.
+Rows run once each, in a single `ORDER BY schema_sequence, function_sequence, table_name`
+(`NULLS LAST` on the two sequence keys), with no per-cadence grouping. `schema_sequence`
+keeps the dependency order nba → statyx → fty → util; `function_sequence` orders the
+functions within a schema.
 
 It runs as a Docker container, once per cron job, on a single always-on host (the NUC).
 
@@ -91,8 +94,10 @@ logs are also available via `docker logs update_tables` until the next run.
 
 Run frequency is otherwise driven from the database: `util.update_schedule.cadence`
 selects which run picks up a row, and `util.update_schedule.pause` excludes it from
-every run (including a bare `./cron.sh`). The `cadence` column is mirrored in
-`sql/tables/util.update_schedule.sql`.
+every run (including a bare `./cron.sh`). The `cadence`, `schema_sequence` and
+`function_sequence` columns are mirrored in `sql/tables/util.update_schedule.sql`, which
+rebuilds the table so its column order (… `cadence`, `schema_sequence`, `function_sequence`,
+`pause`) is reproduced — no dialect here can place a column at a position.
 
 That same argument is written to `util.update_log.cadence` on every row a run inserts
 (`all` for a bare `./cron.sh`). The column is added by rebuilding the table —

@@ -190,7 +190,8 @@ def main():
             execute_options, where = None, 'WHERE pause IS FALSE'
         schedule = hub.db.read(
             'SELECT table_name, associated_function FROM util.update_schedule '
-            f'{where} ORDER BY table_name DESC',
+            f'{where} '
+            'ORDER BY schema_sequence NULLS LAST, function_sequence NULLS LAST, table_name',
             execute_options=execute_options,
         )
     except Exception as e:
