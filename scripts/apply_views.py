@@ -5,6 +5,11 @@ Nothing in this repo ever applied these files; this is that step. The database i
 system of record for the views and sql/views is a hand-applied mirror, so this makes the
 mirror authoritative again.
 
+Reads and writes go through scs_hub's Database, the same connection layer every job uses, so
+there is no psql to install and no DSN to keep in sync. The section to connect with is --con,
+else DB_CON, else [runtime] db_con in the credentials file -- the same file and order
+__main__.py resolves.
+
 Each file is applied with CREATE OR REPLACE, retrying until no new failures appear so a view
 may safely reference another view whose file is applied later in the same run. Nothing is
 dropped by default: DROP ... CASCADE would silently take views that live in the database but
@@ -13,14 +18,13 @@ util.player_directory_vw). When a view's column list has genuinely changed, CREA
 REPLACE cannot express it -- use --force-drop, which drops that one view without CASCADE so a
 real dependency fails loudly instead of being destroyed.
 
-    PGCONN=postgresql://... python scripts/apply_views.py --dry-run
-    PGCONN=postgresql://... python scripts/apply_views.py
-    PGCONN=postgresql://... python scripts/apply_views.py --schema fty
+    DB_CON=cockroach python scripts/apply_views.py --dry-run
+    DB_CON=cockroach python scripts/apply_views.py
+    DB_CON=postgres  python scripts/apply_views.py --schema fty
 
-Cockroach rejects DDL inside an explicit transaction, so statements are not wrapped in one
-when the target reports itself as CockroachDB (detected, or forced with
---no-single-transaction). Cockroach also has no implicit grants for a read-only role, so
---grant re-applies SELECT to that role across every view it just created.
+Cockroach has no implicit grants for a read-only role, so --grant re-applies SELECT to that
+role with Database.regrant_read, which sweeps every table and view in the schemas just
+touched and is idempotent.
 
 The closing count check compares live view counts against the file count per schema, so a
 view that exists in the database without a file is visible rather than assumed harmless.
@@ -29,12 +33,15 @@ view that exists in the database without a file is visible rather than assumed h
 from __future__ import annotations
 
 import argparse
+import configparser
 import os
 import re
-import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
+
+from scs_hub import Database
+from scs_hub.config import credentials_path
 
 VIEWS_DIR = Path(__file__).resolve().parent.parent / 'sql' / 'views'
 NAME_RE = re.compile(r'create\s+(?:or\s+replace\s+)?view\s+([a-z_]\w*\.[a-z_]\w*)', re.I)
@@ -53,39 +60,40 @@ def view_name(sql: str) -> str:
     return match.group(1)
 
 
-def psql(dsn: str, sql: str, single_tx: bool = True) -> tuple[bool, str]:
-    args = ['psql', dsn, '-v', 'ON_ERROR_STOP=1']
-    if single_tx:
-        args.append('--single-transaction')
-    proc = subprocess.run([*args, '-c', sql], capture_output=True, text=True)
-    return proc.returncode == 0, (proc.stderr or proc.stdout).strip()
+def resolve_con(explicit: str | None, ini_path: str) -> str | None:
+    """--con > DB_CON > [runtime] db_con, the same order __main__.py resolves."""
+    if explicit:
+        return explicit
+    env = os.environ.get('DB_CON')
+    if env:
+        return env
+    parser = configparser.ConfigParser()
+    parser.read(ini_path)
+    return parser.get('runtime', 'db_con', fallback=None)
 
 
-def is_cockroach(dsn: str) -> bool:
-    ok, out = psql(dsn, 'SELECT version();', single_tx=False)
-    return ok and 'cockroach' in out.lower()
-
-
-def live_counts(dsn: str, schemas: list[str], single_tx: bool = True) -> Counter[str]:
+def live_counts(db: Database, schemas: list[str]) -> Counter[str]:
     quoted = ','.join(f"'{s}'" for s in schemas)
-    ok, out = psql(
-        dsn,
-        f'SELECT schemaname, count(*) FROM pg_views WHERE schemaname IN ({quoted}) GROUP BY 1',
-        single_tx,
+    df = db.read(
+        f'SELECT schemaname, count(*) AS n FROM pg_views WHERE schemaname IN ({quoted}) GROUP BY 1'
     )
-    counts: Counter[str] = Counter()
-    if not ok:
-        return counts
-    for line in out.splitlines():
-        parts = line.split('|')
-        if len(parts) == 2 and parts[1].strip().isdigit():
-            counts[parts[0].strip()] = int(parts[1])
-    return counts
+    return Counter({schema: int(n) for schema, n in zip(df['schemaname'], df['n'])})
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--dsn', default=os.environ.get('PGCONN'))
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        '--con',
+        default=None,
+        help='credentials.ini section to connect with (default: DB_CON, else [runtime] db_con)',
+    )
+    parser.add_argument(
+        '--ini',
+        default=None,
+        help='credentials.ini path (default: SCS_HUB_CREDENTIALS or ~/.config/scs_hub_credentials.ini)',
+    )
     parser.add_argument('--schema', default=None, help='only this sql/views/<schema>/ folder')
     parser.add_argument(
         '--force-drop',
@@ -94,21 +102,20 @@ def main() -> int:
         'list changed, and it fails loudly rather than taking dependent views with it',
     )
     parser.add_argument(
-        '--no-single-transaction',
-        action='store_true',
-        help='do not wrap statements in a transaction; implied automatically when the '
-        'target reports itself as CockroachDB, which rejects DDL inside one',
-    )
-    parser.add_argument(
         '--grant',
         default=None,
-        help='after applying, GRANT SELECT on every applied view to this role',
+        help='after applying, GRANT SELECT on the touched schemas to this role',
     )
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
 
-    if not args.dsn:
-        print('PGCONN is not set and --dsn was not given', file=sys.stderr)
+    ini_path = credentials_path(args.ini)
+    con = resolve_con(args.con, ini_path)
+    if not con:
+        print(
+            f'no connection: pass --con, set DB_CON, or add [runtime] db_con to {ini_path}',
+            file=sys.stderr,
+        )
         return 2
 
     jobs: list[tuple[Path, str, str]] = []
@@ -130,10 +137,8 @@ def main() -> int:
             print(f'  {name:40s} {path.relative_to(VIEWS_DIR.parent.parent)}')
         return 0
 
-    single_tx = not args.no_single_transaction
-    if single_tx and is_cockroach(args.dsn):
-        print('cockroach detected: statements will not be wrapped in a transaction')
-        single_tx = False
+    db = Database(con, ini_path)
+    print(f'connected to {con} ({db.engine.name})')
 
     expected = Counter(name.split('.')[0] for _, name, _ in jobs)
     pending: list[tuple[Path, str, str]] = list(jobs)
@@ -143,11 +148,13 @@ def main() -> int:
         failed: list[tuple[Path, str, str]] = []
         last_errors = {}
         for path, name, sql in pending:
-            prefix = f'DROP VIEW IF EXISTS {name};\n' if args.force_drop else ''
-            ok, out = psql(args.dsn, f'{prefix}{sql}\n', single_tx)
-            if not ok:
+            try:
+                if args.force_drop:
+                    db.execute(f'DROP VIEW IF EXISTS {name}')
+                db.execute(sql)
+            except Exception as exc:  # report and retry rather than abort the sweep
                 failed.append((path, name, sql))
-                last_errors[path] = out
+                last_errors[path] = str(exc)
         print(f'pass {attempt}: {len(pending) - len(failed)} ok, {len(failed)} failed')
         if not failed:
             done = True
@@ -161,7 +168,7 @@ def main() -> int:
             print(f'FAILED {path}: {last_errors.get(path, "")}', file=sys.stderr)
         return 1
 
-    counts = live_counts(args.dsn, sorted(expected), single_tx)
+    counts = live_counts(db, sorted(expected))
     bad = False
     for schema in sorted(expected):
         got, want = counts.get(schema, 0), expected[schema]
@@ -174,15 +181,10 @@ def main() -> int:
         print(f'{schema}: {got} views live, {want} files [{note}]')
 
     if args.grant:
-        granted = 0
-        for _, name, _ in jobs:
-            ok, out = psql(args.dsn, f'GRANT SELECT ON {name} TO {args.grant};', single_tx)
-            if ok:
-                granted += 1
-            else:
-                bad = True
-                print(f'GRANT FAILED {name}: {out}', file=sys.stderr)
-        print(f'granted SELECT on {granted}/{len(jobs)} views to {args.grant}')
+        granted = db.regrant_read(args.grant, tuple(sorted(expected)))
+        print(
+            f'granted SELECT to {args.grant} on: {", ".join(granted) if granted else "no schemas"}'
+        )
 
     return 1 if bad else 0
 

@@ -131,5 +131,8 @@ uvx ruff check __main__.py
 ```
 
 `scripts/manual_update.py` is a REPL scratchpad for running individual `hub.*` calls by
-hand — not part of the scheduled run, and not in the image. `sql/` holds view, function and
-table DDL for reference (hand-applied; the database is the system of record).
+hand — not part of the scheduled run, and not in the image. `scripts/apply_views.py` applies
+the `sql/views` files and re-grants them, and `scripts/transport.py` mirrors one season
+between two databases (each takes the credentials sections to use; neither is in the image).
+`sql/` holds view, function and table DDL for reference (hand-applied; the database is the
+system of record).
