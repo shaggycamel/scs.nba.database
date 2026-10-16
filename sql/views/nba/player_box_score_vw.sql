@@ -96,7 +96,37 @@ create or replace view nba.player_box_score_vw as
     pbs.pace,
     pbs.pace_per40,
     pbs.poss,
-    pbs.pie
+    pbs.pie,
+    pbs.oreb,
+    pbs.dreb,
+        CASE
+            WHEN (
+            CASE
+                WHEN pbs.pts >= 10::double precision THEN 1
+                ELSE 0
+            END +
+            CASE
+                WHEN pbs.reb >= 10::double precision THEN 1
+                ELSE 0
+            END +
+            CASE
+                WHEN pbs.ast >= 10::double precision THEN 1
+                ELSE 0
+            END +
+            CASE
+                WHEN pbs.stl >= 10::double precision THEN 1
+                ELSE 0
+            END +
+            CASE
+                WHEN pbs.blk >= 10::double precision THEN 1
+                ELSE 0
+            END) >= 4 THEN 1
+            ELSE 0
+        END AS qd,
+        CASE
+            WHEN ej_ev.person_id IS NULL THEN 0
+            ELSE 1
+        END AS ej
    FROM nba.league_game_schedule lgs
      LEFT JOIN ( SELECT tr_inr.season,
             tr_inr.team_slug,
@@ -112,4 +142,8 @@ create or replace view nba.player_box_score_vw as
                    FROM nba.key_dates) kd ON tr_inr.season = kd.season) tr ON lgs.season = tr.season AND lgs.team = tr.team_slug AND lgs.game_date >= tr.entry_date AND lgs.game_date < tr.exit_date
      LEFT JOIN nba.injuries inj ON lgs.game_id = inj.game_id AND lgs.game_date = inj.game_date AND tr.player_id = inj.nba_id::double precision
      LEFT JOIN nba.player_box_score pbs ON lgs.game_id = pbs.game_id AND tr.player_id = pbs.player_id::double precision
+     LEFT JOIN ( SELECT DISTINCT play_by_play.game_id,
+            play_by_play.person_id
+           FROM nba.play_by_play
+          WHERE play_by_play.action_type = 'Ejection'::text AND play_by_play.person_id IS NOT NULL) ej_ev ON lgs.game_id::double precision = ej_ev.game_id::double precision AND tr.player_id = ej_ev.person_id::double precision
      LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::double precision
