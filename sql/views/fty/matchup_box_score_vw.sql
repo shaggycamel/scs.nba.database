@@ -1,46 +1,50 @@
 create or replace view fty.matchup_box_score_vw as
 
--- Pivots the long matchup_box_score back to one column per stat.
--- fgm/fga/ftm/fta are emitted whether or not the league scores them: calc_z_pcts() in
--- the R package needs them for every league, and the fg_pct/ft_pct ratios are derived
--- here rather than stored.
+-- Long form matchup results, one row per competitor per category.
+-- Reads scored categories plus the shooting components (fgm/fga/ftm/fta) from
+-- categories_vw, so the ratio z-scores keep their inputs whatever the league scores.
+-- A ratio category (fg_pct) is built from its numerator/denominator, which live in
+-- matchup_box_score even when the league does not score them; a points league gets
+-- fantasy_points instead.
 
 select
-    bs.season,
-    bs.platform,
-    bs.league_id,
-    bs.competitor_id,
+    c.season,
+    c.platform,
+    c.league_id,
     bs.matchup,
-    max(bs.value) filter (where bs.category = 'pts')   as pts,
-    max(bs.value) filter (where bs.category = 'blk')   as blk,
-    max(bs.value) filter (where bs.category = 'stl')   as stl,
-    max(bs.value) filter (where bs.category = 'ast')   as ast,
-    max(bs.value) filter (where bs.category = 'reb')   as reb,
-    max(bs.value) filter (where bs.category = 'tov')   as tov,
-    max(bs.value) filter (where bs.category = 'fgm')   as fgm,
-    max(bs.value) filter (where bs.category = 'fga')   as fga,
-    max(bs.value) filter (where bs.category = 'ftm')   as ftm,
-    max(bs.value) filter (where bs.category = 'fta')   as fta,
-    max(bs.value) filter (where bs.category = 'fg3_m') as fg3_m,
-    coalesce(
-        max(bs.value) filter (where bs.category = 'fgm')
-        / nullif(max(bs.value) filter (where bs.category = 'fga'), 0),
-        0
-    ) as fg_pct,
-    coalesce(
-        max(bs.value) filter (where bs.category = 'ftm')
-        / nullif(max(bs.value) filter (where bs.category = 'fta'), 0),
-        0
-    ) as ft_pct,
-    max(bs.value) filter (where bs.category = 'dd2')   as dd2,
-    max(bs.value) filter (where bs.category = 'td3')   as td3,
-    lc.competitor_abbrev,
-    lc.competitor_name
-from fty.matchup_box_score bs
-    left join fty.league_competitor lc
-        on bs.season = lc.season
-       and bs.platform = lc.platform
-       and bs.league_id = lc.league_id
-       and bs.competitor_id = lc.competitor_id
-group by bs.season, bs.platform, bs.league_id, bs.competitor_id, bs.matchup,
-         lc.competitor_abbrev, lc.competitor_name
+    bs.competitor_id,
+    c.nba_category as category,
+    c.fmt_category,
+    c.display_order,
+    c.scoring_type,
+    c.scoring_format,
+    c.higher_is_better,
+    case
+        when c.is_ratio then coalesce(num.value / nullif(den.value, 0), 0)
+        else bs.value
+    end as value,
+    case
+        when c.points is not null then bs.value * c.points
+        else null::double precision
+    end as fantasy_points
+from fty.categories_vw c
+    join fty.matchup_box_score bs
+        on bs.season = c.season
+       and bs.platform = c.platform
+       and bs.league_id = c.league_id
+       and bs.category = coalesce(c.numerator, c.nba_category)
+    left join fty.matchup_box_score num
+        on num.season = c.season
+       and num.platform = c.platform
+       and num.league_id = c.league_id
+       and num.matchup = bs.matchup
+       and num.competitor_id = bs.competitor_id
+       and num.category = c.numerator
+    left join fty.matchup_box_score den
+        on den.season = c.season
+       and den.platform = c.platform
+       and den.league_id = c.league_id
+       and den.matchup = bs.matchup
+       and den.competitor_id = bs.competitor_id
+       and den.category = c.denominator
+where c.category_role in ('scored', 'component')
