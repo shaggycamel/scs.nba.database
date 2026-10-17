@@ -3,7 +3,7 @@ from pathlib import Path
 from scs_hub import Database
 
 # Reads SCS_HUB_CREDENTIALS or ~/.config/scs_hub_credentials.ini by default.
-db = Database('cockroach-read')
+db = Database('cockroach-write')
 
 # Every sql/views/<schema>/*.sql file, applied in one pass. CREATE OR REPLACE, so
 # re-running is safe. Globbed from __file__ so it works from any cwd; the schema

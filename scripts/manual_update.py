@@ -7,14 +7,15 @@ hub = SportsHub('postgres')
 # league_game_schedule, and fty's matchup box score reads nba.player_box_score.
 
 # ============================ nba ============================================
-hub.nba.get_game_schedule()
-# hub.nba.get_game_schedule(upcoming_only=True)     # cheap daily refresh
+# hub.nba.get_game_schedule()
+hub.nba.get_game_schedule(upcoming_only=True)     # cheap daily refresh
 hub.nba.get_player_info()                           # one call per player, ~1s each
 # hub.nba.get_team_roster()
 hub.nba.get_team_roster(pre_season=True)          # initial load, entry_date left null
 hub.nba.get_player_season_stats()                   # one call per player, ~1s each
 hub.nba.get_player_box_score()
 hub.nba.get_team_box_score()
+hub.nba.get_play_by_play()
 hub.nba.get_team_injuries()
 # hub.nba.get_team_injuries(force_date="2026-09-25")
 
@@ -50,9 +51,10 @@ hub.fty.get_league()
 hub.fty.get_league_categories()
 hub.fty.get_league_competitor()
 hub.fty.get_league_matchup()
+hub.fty.get_league_matchup_dates()
 hub.fty.get_competitor_roster()
 hub.fty.get_free_agents()
-hub.fty.get_recent_activity()
+hub.fty.get_recent_activity() 
 hub.fty.get_matchup_box_score()
 hub.fty.get_league_byes()
 

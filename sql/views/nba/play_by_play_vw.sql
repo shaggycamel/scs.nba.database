@@ -1,0 +1,31 @@
+create or replace view nba.play_by_play_vw as
+
+ SELECT lgs.season,
+    lgs.season_type,
+    lgs.game_date,
+    pbp.game_id,
+    pbp.action_number,
+    pbp.action_id,
+    pbp.period,
+    pbp.clock,
+    pbp.team_id,
+    pbp.team_tricode,
+    pbp.person_id,
+    pbp.player_name,
+    pbp.player_name_i,
+    pbp.action_type,
+    pbp.sub_type,
+    pbp.description,
+    pbp.is_field_goal,
+    pbp.shot_result,
+    pbp.shot_distance,
+    pbp.shot_value,
+    pbp.x_legacy as court_x,
+    pbp.y_legacy as court_y,
+    pbp.score_home,
+    pbp.score_away,
+    pbp.points_total,
+    pbp.location,
+    pbp.video_available
+   FROM nba.play_by_play pbp
+     LEFT JOIN nba.league_game_schedule lgs ON pbp.game_id::double precision = lgs.game_id::double precision;

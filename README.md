@@ -30,7 +30,7 @@ file scs-hub reads for its DB and platform credentials. Set `SCS_HUB_CREDENTIALS
 point at a different path instead; both `__main__.py` and scs-hub honour it. Create the
 file `chmod 600` and never commit it (it lives outside the repo).
 
-It holds the DB/platform sections scs-hub expects (`[cockroach]`/`[postgres]`,
+It holds the DB/platform sections scs-hub expects (`[cockroach-write]`/`[postgres]`,
 `[statyx]`, `[espn_api]`, `[yahoo_api]`) plus this repo's `[runtime]` and `[smtp]` sections.
 
 A direct `python __main__.py` reads the same file, so no `cd` or working-directory setup is
@@ -58,7 +58,7 @@ leave the box.
 ```bash
 # 1. one-off: the system-wide config file
 mkdir -p ~/.config
-$EDITOR ~/.config/scs_hub_credentials.ini   # real creds, db_con = cockroach
+$EDITOR ~/.config/scs_hub_credentials.ini   # real creds, db_con = cockroach-write
 chmod 600 ~/.config/scs_hub_credentials.ini
 
 # 2. build (repeat after every git pull)
@@ -66,19 +66,24 @@ cd ~/shaggy_camel_sports/nba/database && git pull
 docker build -t scs.nba.database:latest .
 
 # 3. run
-./cron.sh                  # all unpaused tables
-./cron.sh daily,intraday   # only those cadences
+./cron.sh                         # all unpaused tables
+./cron.sh daily,intraday,weekly   # only those cadences
 ```
 
 `cron.sh` bind-mounts the config read-only at `/root/.config/scs_hub_credentials.ini`,
-so nothing secret is in the image. It keeps the container after the run (no `--rm`) so
-`docker logs update_tables` works until the next run, and it propagates the exit status.
+so nothing secret is in the image. The run writes through the `[cockroach-write]` section
+(`cron.sh` sets `DB_CON=cockroach-write` unless the environment already sets it). It keeps
+the container after the run (no `--rm`) so `docker logs update_tables` works until the next
+run, and it propagates the exit status.
 
 Crontab — cron has no `PATH` (which is why `cron.sh` sets one) and `CRON_TZ` fixes the
 zone the hours are read in:
 
 ```cron
 CRON_TZ=Pacific/Auckland
+
+# weekly, Tuesday 01:00 NZ
+0 1 * * 2       /home/oli/shaggy_camel_sports/nba/database/cron.sh weekly   >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
 # daily, 02:00 NZ
 0 2 * * *       /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
@@ -90,7 +95,9 @@ CRON_TZ=Pacific/Auckland
 
 No environment setup needed — `cron.sh` reads `~/.config/scs_hub_credentials.ini` (or
 `SCS_HUB_CREDENTIALS`). The redirect captures the wrapper's output; the container's own
-logs are also available via `docker logs update_tables` until the next run.
+logs are also available via `docker logs update_tables` until the next run. The NUC's
+crontab currently has these entries commented out, so until they are enabled each run is
+started by hand (`./cron.sh weekly`, and so on).
 
 Run frequency is otherwise driven from the database: `util.update_schedule.cadence`
 selects which run picks up a row, and `util.update_schedule.pause` excludes it from
