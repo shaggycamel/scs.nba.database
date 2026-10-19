@@ -217,18 +217,18 @@ def main():
 
     failures = []
 
-    def run(table_name, fn):
+    def run(associated_function, fn):
         try:
-            log.info('starting: %s', table_name)
+            log.info('starting: %s', associated_function)
             fn()
         except Exception as e:
             error = f'{type(e).__name__}: {e}'
-            log.exception('NOT UPDATED: %s', table_name)
-            failures.append((table_name, error))
-            log_event(table_name, False, error)
+            log.exception('NOT UPDATED: %s', associated_function)
+            failures.append((associated_function, error))
+            log_event(associated_function, False, error)
         else:
-            log.info('finished: %s', table_name)
-            log_event(table_name, True)
+            log.info('finished: %s', associated_function)
+            log_event(associated_function, True)
 
     # connect_leagues isn't a table, so it gets no update_log row of its own;
     # a failure still counts towards the alert, exit code and 'process end' row.
@@ -240,7 +240,7 @@ def main():
             failures.append(('connect_leagues', f'{type(e).__name__}: {e}'))
 
     for row in schedule.iter_rows(named=True):
-        run(row['table_name'], lambda f=row['associated_function']: resolve(f)())
+        run(row['associated_function'], lambda f=row['associated_function']: resolve(f)())
 
     log_event('process end', len(failures) == 0)
 

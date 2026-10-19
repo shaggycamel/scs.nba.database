@@ -4,7 +4,8 @@ Scheduled table updates for the NBA / fantasy database.
 
 `__main__.py` reads `util.update_schedule`, calls each row's `associated_function` on a
 [scs-hub](https://github.com/shaggycamel/scs.scs_hub) `SportsHub`, writes one row per
-table to `util.update_log`, emails any failures, and exits non-zero if anything failed.
+scheduled function to `util.update_log` (`task` is the row's `associated_function`),
+emails any failures, and exits non-zero if anything failed.
 Each `util.update_log` row records the run's `cadence` — the argument that selected it,
 or `all` for a bare run.
 

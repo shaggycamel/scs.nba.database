@@ -7,8 +7,9 @@
 --                  can be grouped
 --   cadence        mirrors the cron.sh argument that selected the run ('all' for a bare
 --                  run), the same value that selected rows in util.update_schedule
---   task           the object updated ('nba.injuries', 'process start'), or a
---                  'dashboard:*' event name
+--   task           the scheduled row's associated_function
+--                  ('nba.get_team_injuries', 'process start') from here, or a
+--                  'dashboard:*' event name from the dashboard repo
 --   task_time      when the row was written
 --   success        whether that object's update succeeded
 --   error_message  the failure text, NULL on success
