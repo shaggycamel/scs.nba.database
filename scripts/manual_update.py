@@ -8,7 +8,7 @@ hub = SportsHub('postgres')
 
 # ============================ nba ============================================
 # hub.nba.get_game_schedule()
-hub.nba.get_game_schedule(upcoming_only=True)     # cheap daily refresh
+hub.nba.get_game_schedule()                        # full-season refresh
 hub.nba.get_player_info()                           # one call per player, ~1s each
 # hub.nba.get_team_roster()
 hub.nba.get_team_roster(pre_season=True)          # initial load, entry_date left null
