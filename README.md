@@ -77,28 +77,32 @@ so nothing secret is in the image. The run writes through the `[cockroach-write]
 the container after the run (no `--rm`) so `docker logs update_tables` works until the next
 run, and it propagates the exit status.
 
-Crontab — cron has no `PATH` (which is why `cron.sh` sets one) and `CRON_TZ` fixes the
-zone the hours are read in:
+Crontab — cron has no `PATH` (which is why `cron.sh` sets one). The NUC runs Ubuntu's
+Debian/Vixie cron, which ignores `CRON_TZ` (that is a cronie feature), and its system
+timezone is `Etc/UTC`, so every hour below is UTC. They are the UTC equivalents of the
+original NZ wall-clock times, fixed in UTC so runs stay aligned to the US game schedule
+rather than shifting with NZ DST:
 
 ```cron
-CRON_TZ=Pacific/Auckland
+# weekly, Monday 12:00 UTC (Tuesday 01:00 NZDT)
+0 12 * * 1      /home/oli/shaggy_camel_sports/nba/database/cron.sh weekly   >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
-# weekly, Tuesday 01:00 NZ
-0 1 * * 2       /home/oli/shaggy_camel_sports/nba/database/cron.sh weekly   >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+# daily, 13:00 UTC (02:00 NZDT)
+0 13 * * *      /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
-# daily, 02:00 NZ
-0 2 * * *       /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+# intraday, every 3h: 01,04,07,10,16,19,22 UTC (05,08,11,14,17,20,23 NZDT)
+0 1,4,7,10,16,19,22 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
-# intraday, every 3h across two windows (17:00-23:00 and 05:00-14:00 NZ)
-0 17-23/3 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
-0 5-14/3  * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+# league dash: daily 16:30 UTC (05:30 NZDT);
+# intraday 01:30,03:30,17:30,19:30,21:30,23:30 UTC
+30 16 * * *     PROVISION=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
+30 1,3,17,19,21,23 * * * PROVISION=1 SKIP_BASE=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
 ```
 
 No environment setup needed — `cron.sh` reads `~/.config/scs_hub_credentials.ini` (or
 `SCS_HUB_CREDENTIALS`). The redirect captures the wrapper's output; the container's own
-logs are also available via `docker logs update_tables` until the next run. The NUC's
-crontab currently has these entries commented out, so until they are enabled each run is
-started by hand (`./cron.sh weekly`, and so on).
+logs are also available via `docker logs update_tables` until the next run. These entries
+are live on the NUC.
 
 Run frequency is otherwise driven from the database: `util.update_schedule.cadence`
 selects which run picks up a row, and `util.update_schedule.pause` excludes it from

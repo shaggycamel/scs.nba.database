@@ -1,7 +1,8 @@
 from scs_hub import SportsHub
 
 # Reads SCS_HUB_CREDENTIALS or ~/.config/scs_hub_credentials.ini by default.
-hub = SportsHub('postgres')
+# hub = SportsHub('postgres')
+hub = SportsHub('cockroach-write')
 
 # Order is deliberate: nba's box scores take their game list from
 # league_game_schedule, and fty's matchup box score reads nba.player_box_score.
@@ -47,6 +48,7 @@ hub.statyx.get_team_assist_defense()
 hub.fty.connect_leagues()                           # opens a live session per league
 # hub.fty.connect_leagues(season="2024-25")         # backfill another season
 
+
 hub.fty.get_league()
 hub.fty.get_league_categories()
 hub.fty.get_league_competitor()
@@ -55,8 +57,8 @@ hub.fty.get_league_matchup_dates()
 hub.fty.get_competitor_roster()
 hub.fty.get_free_agents()
 hub.fty.get_recent_activity() 
-hub.fty.get_matchup_box_score()
 hub.fty.get_league_byes()
+hub.fty.get_matchup_box_score()
 
 # ============================ util ============================================
 # Check the backlog. If non-empty, resolve it with funciton.
