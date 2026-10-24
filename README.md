@@ -7,7 +7,9 @@ Scheduled table updates for the NBA / fantasy database.
 scheduled function to `util.update_log` (`task` is the row's `associated_function`),
 emails any failures, and exits non-zero if anything failed.
 Each `util.update_log` row records the run's `cadence` — the argument that selected it,
-or `all` for a bare run.
+or `all` for a bare run — and `row_count`: the rows the task wrote (`0` for a successful
+no-op). For `util.sync_player_identity` it is the number of new players minted instead.
+Failed tasks, `process start`/`process end`, and dashboard rows keep `row_count` NULL.
 
 ```
 python __main__.py                 # every table where pause IS FALSE
@@ -120,6 +122,13 @@ into the container. The columns are established by rebuilding the table —
 `sql/tables/util.update_log.sql`, run against postgres only (a rebuild is required because
 no dialect here can place a column at a position). Cockroach is then overwritten from
 postgres, which recreates the table in the same column order.
+
+`row_count` was added later with `ALTER TABLE util.update_log ADD COLUMN row_count BIGINT`
+on both databases, so it sits last and rows written before then keep NULL. A rebuild
+reproduces that visible order. It counts rows written, not net change: delete-and-rewrite
+tasks report their insert volume, deletes are not counted, and tasks that write nothing
+log `0`. `util.sync_player_identity` is the exception — it reports gross new
+`util.player` rows minted, because its raw engine writes do not pass through `db.write`.
 
 ## Notes on the image
 

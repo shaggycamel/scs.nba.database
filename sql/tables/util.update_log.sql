@@ -13,6 +13,10 @@
 --   task_time      when the row was written
 --   success        whether that object's update succeeded
 --   error_message  the failure text, NULL on success
+--   row_count      rows the task wrote (0 for a successful no-op). For
+--                  util.sync_player_identity it is the number of new players
+--                  minted. NULL for failures, 'process start'/'process end',
+--                  dashboard rows and rows written before this column existed.
 --
 -- Hand-applied, like sql/views and sql/functions: the database is the system of record
 -- and this file is the mirror. Run it against POSTGRES only -- CockroachDB is overwritten
@@ -21,13 +25,17 @@
 --
 -- Why a rebuild and not ADD COLUMN: neither Postgres nor CockroachDB can place a column at
 -- a position; ADD COLUMN only appends. So this file rebuilds the table whenever the column
--- set or its order changes. The INSERT names all seven columns on both sides, so it carries
+-- set or its order changes. The INSERT names all columns on both sides, so it carries
 -- every value through whatever order the old table had.
+--
+-- row_count was added last with ALTER TABLE ... ADD COLUMN on both databases, so it sits
+-- at the end and historical rows keep NULL. A later rebuild reproduces that visible order
+-- (Cockroach's hidden rowid may sit before it after an ALTER).
 --
 -- History: table_name -> task, process_date -> task_time, successful_run -> success, plus
 -- source / job_kickoff added (rows predating those keep job_kickoff = NULL and cadence =
 -- NULL); then the columns were reordered to source, job_kickoff, cadence, task, task_time,
--- success, error_message.
+-- success, error_message; then row_count appended.
 
 BEGIN;
 ALTER TABLE util.update_log RENAME TO update_log_old;
@@ -38,9 +46,10 @@ CREATE TABLE util.update_log (
     task           TEXT,
     task_time      TIMESTAMPTZ,
     success        BOOLEAN,
-    error_message  TEXT
+    error_message  TEXT,
+    row_count      BIGINT
 );
-INSERT INTO util.update_log (source, job_kickoff, cadence, task, task_time, success, error_message)
-SELECT source, job_kickoff, cadence, task, task_time, success, error_message FROM util.update_log_old;
+INSERT INTO util.update_log (source, job_kickoff, cadence, task, task_time, success, error_message, row_count)
+SELECT source, job_kickoff, cadence, task, task_time, success, error_message, row_count FROM util.update_log_old;
 DROP TABLE util.update_log_old;
 COMMIT;

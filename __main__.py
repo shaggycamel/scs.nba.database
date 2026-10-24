@@ -39,7 +39,7 @@ from datetime import datetime
 from smtplib import SMTP
 from zoneinfo import ZoneInfo
 
-from polars import DataFrame
+from polars import DataFrame, Int64
 from scs_hub import SportsHub
 from scs_hub.config import credentials_path
 
@@ -86,6 +86,22 @@ log.info('Writing to database: %s', DB_CON)
 
 log_write_errors = []
 
+# Set to a one-item list while a task is running, None otherwise. The wrapper
+# below counts only task writes; log_event() runs with this None, so the
+# update_log insert itself is never counted.
+rows_written = None
+_db_write = hub.db.write
+
+
+def counted_write(df, *args, **kwargs):
+    result = _db_write(df, *args, **kwargs)
+    if rows_written is not None:
+        rows_written[0] += df.height
+    return result
+
+
+hub.db.write = counted_write
+
 # Set in main() from the cron.sh argument; 'all' when none was given.
 run_cadence = 'all'
 
@@ -97,12 +113,15 @@ _kickoff = os.environ.get('UPDATE_LOG_KICKOFF')
 run_kickoff = datetime.fromisoformat(_kickoff) if _kickoff else datetime.now(NZ)
 
 
-def log_event(task, success, error=None):
+def log_event(task, success, error=None, row_count=None):
     """Write one row to util.update_log. A failed write doesn't stop the run,
     but it is recorded and makes the run exit non-zero and send an alert.
 
     Each row carries run_cadence (the argument that selected this run), source
-    (the writing repo) and run_kickoff (this run's start, shared by every row)."""
+    (the writing repo) and run_kickoff (this run's start, shared by every row).
+    row_count is the rows the task wrote (0 for a successful no-op), or the new
+    players minted for util.sync_player_identity. It stays NULL for failures,
+    process bookends and dashboard rows."""
     try:
         df = DataFrame(
             {
@@ -113,7 +132,9 @@ def log_event(task, success, error=None):
                 'task_time': datetime.now(NZ),
                 'success': success,
                 'error_message': error,
-            }
+                'row_count': row_count,
+            },
+            schema_overrides={'row_count': Int64},
         )
         hub.db.write(df, 'update_log', 'util')
     except Exception as e:
@@ -218,17 +239,31 @@ def main():
     failures = []
 
     def run(associated_function, fn):
+        global rows_written
+        counted_rows = [0]
+        rows_written = counted_rows
+        error = None
+        result = None
         try:
             log.info('starting: %s', associated_function)
-            fn()
+            result = fn()
         except Exception as e:
             error = f'{type(e).__name__}: {e}'
             log.exception('NOT UPDATED: %s', associated_function)
             failures.append((associated_function, error))
+        finally:
+            rows_written = None
+
+        if error is not None:
             log_event(associated_function, False, error)
+            return
+
+        if associated_function == 'util.sync_player_identity':
+            row_count = result.get('minted') if isinstance(result, dict) else None
         else:
-            log.info('finished: %s', associated_function)
-            log_event(associated_function, True)
+            row_count = counted_rows[0]
+        log.info('finished: %s', associated_function)
+        log_event(associated_function, True, row_count=row_count)
 
     # connect_leagues isn't a table, so it gets no update_log row of its own;
     # a failure still counts towards the alert, exit code and 'process end' row.
