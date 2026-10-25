@@ -158,3 +158,9 @@ the `sql/views` files and re-grants them, and
 neither is in the image.
 `sql/` holds view, function and table DDL for reference (hand-applied; the database is the
 system of record).
+
+## Deferred work
+
+The fty roster/division change still needs the NUC image rebuilt and the weekly
+`fty.get_league` / `fty.get_league_competitor` schedule rows added. See
+[FTY_ROSTER_DIVISIONS_FOLLOWUP.md](FTY_ROSTER_DIVISIONS_FOLLOWUP.md).
