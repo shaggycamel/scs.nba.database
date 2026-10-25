@@ -7,7 +7,9 @@ select
     lc.competitor_id,
     lc.competitor_abbrev,
     lc.competitor_name,
-    lg.league_name
+    lg.league_name,
+    lc.division_id,
+    lc.division_name
 from fty.league_competitor lc
     left join fty.league lg
         on lc.league_id = lg.league_id

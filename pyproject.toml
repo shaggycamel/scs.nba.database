@@ -10,4 +10,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-scs-hub = { git = "https://github.com/shaggycamel/scs.scs_hub.git" }
+scs-hub = { git = "https://github.com/shaggycamel/scs.scs_hub.git", rev = "c2a14853d5284d947ac9055f334b0c10ec198f7c" }
