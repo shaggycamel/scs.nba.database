@@ -982,7 +982,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "polars", specifier = ">=1.44.1" },
-    { name = "scs-hub", git = "https://github.com/shaggycamel/scs.scs_hub.git?rev=c2a14853d5284d947ac9055f334b0c10ec198f7c" },
+    { name = "scs-hub", git = "https://github.com/shaggycamel/scs.scs_hub.git" },
 ]
 
 [[package]]
@@ -1488,7 +1488,7 @@ wheels = [
 [[package]]
 name = "scs-hub"
 version = "0.1.0"
-source = { git = "https://github.com/shaggycamel/scs.scs_hub.git?rev=c2a14853d5284d947ac9055f334b0c10ec198f7c#c2a14853d5284d947ac9055f334b0c10ec198f7c" }
+source = { git = "https://github.com/shaggycamel/scs.scs_hub.git#7f9e831adc2b21230dc5bf0181f04ac5e0c5ac4c" }
 dependencies = [
     { name = "aiohttp" },
     { name = "espn-api" },
