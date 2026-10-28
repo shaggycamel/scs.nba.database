@@ -161,6 +161,7 @@ system of record).
 
 ## Deferred work
 
-The fty roster/division change still needs the NUC image rebuilt and the weekly
-`fty.get_league` / `fty.get_league_competitor` schedule rows added. See
-[FTY_ROSTER_DIVISIONS_FOLLOWUP.md](FTY_ROSTER_DIVISIONS_FOLLOWUP.md).
+None. The fty roster/division deploy and the 2026-27 schedule/injury repair
+were completed on 2026-10-28. See
+[FTY_ROSTER_DIVISIONS_FOLLOWUP.md](FTY_ROSTER_DIVISIONS_FOLLOWUP.md) and
+[INJURY_GAME_ID_PLAN.md](INJURY_GAME_ID_PLAN.md) for the record.

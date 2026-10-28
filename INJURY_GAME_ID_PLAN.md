@@ -6,7 +6,7 @@ Restore `nba.league_game_schedule` for 2026-27 and fill `nba.injuries.game_id`, 
 `nba.player_box_score_vw.inj_status` is populated again and H2H past cells get their
 `Out` marker. Fix the upstream cause so a failed schedule fetch can never wipe a season.
 
-## Status (2026-10-24)
+## Status (2026-10-28)
 
 Completed:
 
@@ -17,17 +17,23 @@ Completed:
   dropped).
 - `nba.injuries` cleared and recollected for US dates 2026-10-20..23;
   213 rows, all with `game_id`. The Oct 23 report also wrote 16 rows for
-  Oct 24 game dates.
+  Oct 24 game dates. The live table now runs through 2026-10-28 with every
+  recent row carrying a `game_id`.
 - `get_player_box_score`/`get_team_box_score` now select completed scheduled
   games missing from their base tables; the 2026-27 gaps were backfilled.
+  The daily run on 2026-10-28 added the remaining 309 player rows and 20 team
+  rows.
 - `nba.player_box_score_vw` key_dates join aggregates to one row per season;
   duplicate groups for 2026-10-20 dropped from 121 to 0 on cockroach-write.
-
-Still open:
-
-- NUC image rebuild and unpausing `nba.get_game_schedule` (SSH to the NUC is
-  currently refused).
-- postgres is not yet aligned with cockroach.
+- NUC image rebuilt from database `eab3060` / scs-hub `7f9e831`;
+  `nba.get_game_schedule` unpaused and the daily run refreshed 2026-27
+  (2,532 rows / 1,266 games). The old Oct 19 image was removed.
+- postgres aligned with cockroach for 2026-27 (`nba` + `fty` transport);
+  all 24 transported tables match, duplicate groups are zero and the recent
+  injury view rows match.
+- Preseason `nba.player_box_score` exact duplicates removed: 702 groups /
+  1,696 rows for games 2026-10-03..07; 0 duplicate groups remain. Postgres
+  inherited the clean rows through the transport.
 
 ## Current state at start (2026-10-23)
 
@@ -42,7 +48,9 @@ Still open:
 - `ScheduleLeagueV2(league_id="00", season="2026-27")` returns 1,274 games
   (2026-10-03..2027-04-11): 67 preseason, 1,206 regular season, 1 NBA Cup. IDs are
   NBA IDs (`0022600001` -> `22600001`). For 2025-26 it returns 1,400 games including
-  playoffs, All-Star, play-in and NBA Cup.
+  playoffs, All-Star, play-in and NBA Cup. Correction (2026-10-28): the live API
+  returns 2,532 rows / 1,266 games (66 preseason, 1,200 regular season) — the
+  1,274 figure above is stale.
 - `LeagueGameLog(season=2026)` currently returns 0 regular-season rows and only the
   134 preseason rows, so it cannot supply the missing regular season.
 - The static schedule CDN returns HTTP 403 from this host
@@ -153,8 +161,8 @@ In `scs_hub/src/scs_hub/nba.py`:
 - Back up `nba.league_game_schedule` and `nba.injuries` to the `scratch` schema (not in
   `TRANSPORT_SCHEMAS`) or to CSV. Do not leave backup tables in `nba`; `transport_from`
   would move them.
-- Run `nba.get_game_schedule()` with the fixed image. Verify 2026-27 has 2,548 team rows
-  (1,274 games) and Regular Season starts 2026-10-20.
+- Run `nba.get_game_schedule()` with the fixed image. Verify 2026-27 has 2,532 team rows
+  (1,266 games) and Regular Season starts 2026-10-20.
 - Run `nba.get_team_injuries()` once. The new backfill should set all 163 NULL IDs.
 - Run `nba.get_player_box_score()` and `nba.get_team_box_score()` with the fixed
   selectors. Verify all 2026-10-20 games (22600001-03) have base rows.
@@ -170,7 +178,7 @@ FROM nba.league_game_schedule
 WHERE season = '2026-27'
 GROUP BY 1 ORDER BY 1;
 
--- injuries: expect 16/16, 80/80, 12/12, 55/55
+-- injuries: expect rows = with_id for every date
 SELECT game_date, count(*) AS rows, count(game_id) AS with_id
 FROM nba.injuries
 WHERE game_date >= '2026-10-20'
@@ -213,6 +221,13 @@ WHERE season = '2026-27' AND game_date = '2026-10-20' AND inj_status = 'Out';
 
 ## Preserve existing work
 
-- `nba/database` has uncommitted changes in `README.md` and
-  `scripts/manual_update.py`; leave them untouched.
-- `scs_hub` is clean; do not stage unrelated files.
+- `scripts/manual_update.py` was left untouched.
+- The README deferred-work section was updated in this closure.
+
+## Removal
+
+Delete this file once the NUC database image has completed a full scheduled
+cycle — the next intraday, daily and weekly runs — with every
+`util.update_log` task successful and no errors in `cron.log` or
+`docker logs update_tables`. When deleting it, also remove the README link to
+this file.

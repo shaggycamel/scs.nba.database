@@ -1,12 +1,19 @@
-# fty roster/division capture — remaining work
+# fty roster/division capture — deploy record
 
-Last updated: 2026-10-25
+Last updated: 2026-10-28
 
-The ESPN roster/division feature is merged and the database is already
-backfilled. Two deploy-time steps remain, both blocked on NUC access.
+The ESPN roster/division feature is merged, backfilled and deployed. Both
+deploy-time steps were completed on 2026-10-28.
 
 ## Current state
 
+- NUC image rebuilt from database `eab3060` / scs-hub `7f9e831` on
+  2026-10-28; the old image was removed.
+- `fty.get_league` and `fty.get_league_competitor` are on
+  `util.update_schedule` as `weekly` rows with `pause = false`.
+- The 2026-10-28 weekly run succeeded: `fty.get_league` wrote 4 rows and
+  `fty.get_league_competitor` wrote 48; all roster/division fields remain
+  populated.
 - `scs_hub` main: `7f9e831` (PR #5).
   - `fty.get_league` now returns `roster_size` and `starter_count`.
   - `fty.get_league_competitor` now returns `division_id` and `division_name`.
@@ -29,30 +36,23 @@ backfilled. Two deploy-time steps remain, both blocked on NUC access.
   `yahoo_nba.py` handler is deleted. Historical `yahoo_id` mappings and view
   columns remain intentionally.
 
-## Remaining step 1 — rebuild/deploy the NUC image
+## Completed step 1 — rebuild/deploy the NUC image
 
-The NUC is still running the pre-feature image. Until it is rebuilt,
-`fty.get_league` and `fty.get_league_competitor` are **not** on
-`util.update_schedule`, so nothing overwrites the new fields.
-
-On the NUC:
+Done 2026-10-28. The image was built from database `eab3060` /
+scs-hub `7f9e831` and smoke-tested for the new fty fields. Commands used:
 
 ```bash
 cd ~/shaggy_camel_sports/nba/database
-git pull
+git pull --ff-only
 docker build -t scs.nba.database:latest .
-./cron.sh
 ```
 
-Confirm the image is built from database main `5815405` / scs-hub `7f9e831`.
+## Completed step 2 — add weekly schedule rows
 
-## Remaining step 2 — add weekly schedule rows (AFTER the rebuild)
+Done 2026-10-28, after the rebuild, on **both postgres and cockroach**. Both
+rows exist once with `pause = false`; the first weekly run succeeded.
 
-**Do this only after the NUC is running the new image.** The old image's
-handlers would rewrite `fty.league` and `fty.league_competitor` rows without the
-new columns, setting them back to NULL.
-
-Apply idempotently to **both postgres and cockroach**:
+The idempotent SQL applied:
 
 ```sql
 INSERT INTO util.update_schedule
@@ -78,13 +78,21 @@ WHERE NOT EXISTS (
 `fty.get_league_byes` row also uses 1, but the `table_name` tie-break keeps
 `league` before `league_byes`; there is no dependency between them.
 
-## Verification after the weekly run
+## Verification after the weekly run (2026-10-28)
 
 - `util.update_schedule` has both rows with `pause = false`.
-- `util.update_log` shows successful `fty.get_league` and
-  `fty.get_league_competitor` rows for the weekly run.
+- `util.update_log` shows successful `fty.get_league` (4 rows) and
+  `fty.get_league_competitor` (48 rows) entries.
 - `fty.league`: 10/10 rows still have `roster_size` and `starter_count`.
 - Divisions remain populated only for `2023-24`/`1966813226` and
-  `2026-27`/`1440301458`.
-- `fty.base_vw` and `fty.roster_schedule_vw` still return rows.
+  `2026-27`/`1440301458`; postgres matches cockroach (20 division rows).
+- `fty.base_vw` returns 114 rows and `fty.roster_schedule_vw` 155,018.
 - `yfpy` / `yahoo-oauth` are absent from the rebuilt image.
+
+## Removal
+
+Delete this file once the NUC database image has completed a full scheduled
+cycle — the next intraday, daily and weekly runs — with every
+`util.update_log` task successful and no errors in `cron.log` or
+`docker logs update_tables`. When deleting it, also remove the README link to
+this file.
