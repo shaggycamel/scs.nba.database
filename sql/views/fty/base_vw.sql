@@ -9,7 +9,8 @@ select
     lc.competitor_name,
     lg.league_name,
     lc.division_id,
-    lc.division_name
+    lc.division_name,
+    lg.starter_count
 from fty.league_competitor lc
     left join fty.league lg
         on lc.league_id = lg.league_id
