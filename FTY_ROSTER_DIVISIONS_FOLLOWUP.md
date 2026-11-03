@@ -31,7 +31,9 @@ deploy-time steps were completed on 2026-10-28.
   - Both views applied and re-granted.
 - `fty.competitor_roster` is unchanged. `lineup_slot`,
   `competitor_roster_size_vw`, and the `util.table_column_order` row were
-  deliberately removed.
+  deliberately removed. `lineup_slot` was re-added on 2026-11-03 (see
+  `sql/tables/fty.roster_metadata.sql`) so the dashboard can tell the active
+  line-up from the bench; the other two stay out.
 - Yahoo is removed as a live platform: `yfpy` is gone from both repos and the
   `yahoo_nba.py` handler is deleted. Historical `yahoo_id` mappings and view
   columns remain intentionally.

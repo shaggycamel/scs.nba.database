@@ -20,3 +20,10 @@ ALTER TABLE fty.league ADD COLUMN IF NOT EXISTS starter_count bigint;
 
 ALTER TABLE fty.league_competitor ADD COLUMN IF NOT EXISTS division_id bigint;
 ALTER TABLE fty.league_competitor ADD COLUMN IF NOT EXISTS division_name text;
+
+-- The slot a player occupied on a snapshot date, straight from ESPN's
+-- lineupSlotId: the starting slots (PG, SG, SF, PF, C, G, F, SG/SF, G/F, PF/C,
+-- F/C, UT), plus BE and IR. fty.competitor_roster keeps every rostered player;
+-- the dashboard uses this column to tell the active line-up from the bench.
+-- NULL for snapshots taken before the column existed.
+ALTER TABLE fty.competitor_roster ADD COLUMN IF NOT EXISTS lineup_slot text;

@@ -23,7 +23,8 @@ select
     schedule.opponent_id::bigint as opponent_id,
     opponent.competitor_name     as opponent_name,
     competitor.division_id,
-    competitor.division_name
+    competitor.division_name,
+    roster.lineup_slot
 from fty.competitor_roster roster
     left join fty.league_matchup schedule
         on roster.season = schedule.season
