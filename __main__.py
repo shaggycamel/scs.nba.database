@@ -1,7 +1,7 @@
 """Runs the scheduled table updates listed in util.update_schedule.
 
 Usage:
-    python __main__.py                      # every table where pause IS FALSE
+    python __main__.py                      # every database-family table where pause IS FALSE
     python __main__.py daily,intraday       # only these cadences (alt-frequency runs)
     python __main__.py daily intraday       # same; space- or comma-separated
     (interactive consoles: '-f <kernel file>' in argv is ignored)
@@ -194,7 +194,7 @@ def main():
     # ipykernel (Positron/Jupyter consoles) passes '-f <connection file>' in argv;
     # drop the flag AND its value so the kernel file isn't read as a cadence.
     # Cadences come space- or comma-separated ('daily,intraday' == 'daily intraday'); a bare run
-    # means every unpaused row.
+    # means every unpaused database-family row.
     args, skip = [], False
     for a in sys.argv[1:]:
         if skip:
@@ -216,9 +216,11 @@ def main():
             # Only the placeholder count is interpolated; the values stay bound.
             placeholders = ', '.join(f':c{i}' for i in range(len(cadences)))
             execute_options = {'parameters': {f'c{i}': c for i, c in enumerate(cadences)}}
-            where = f'WHERE cadence IN ({placeholders}) AND pause IS FALSE'
+            where = (
+                f"WHERE job_family = 'database' AND cadence IN ({placeholders}) AND pause IS FALSE"
+            )
         else:
-            execute_options, where = None, 'WHERE pause IS FALSE'
+            execute_options, where = None, "WHERE job_family = 'database' AND pause IS FALSE"
         schedule = hub.db.read(
             'SELECT table_name, associated_function FROM util.update_schedule '
             f'{where} '

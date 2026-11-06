@@ -4,8 +4,8 @@
 -- regardless of cadence.
 --
 -- job_family groups rows by the kind of thing they maintain, so a runner can be pointed at
--- one family of jobs instead of a whole schema. Every row is currently 'database'. Nullable
--- until a second family is in use.
+-- one family of jobs instead of a whole schema. __main__.py hardcodes job_family = 'database';
+-- every row is currently 'database'. Nullable until a second family is in use.
 --
 -- Run order: __main__.py orders by schema_sequence, then function_sequence, then
 -- table_name (NULLS LAST on the two sequence keys). schema_sequence is the rank shared by

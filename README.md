@@ -12,13 +12,15 @@ no-op). For `util.sync_player_identity` it is the number of new players minted i
 Failed tasks, `process start`/`process end`, and dashboard rows keep `row_count` NULL.
 
 ```
-python __main__.py                 # every table where pause IS FALSE
+python __main__.py                 # every database-family table where pause IS FALSE
 python __main__.py daily,intraday  # only rows whose cadence is one of these
 python __main__.py daily intraday  # same; space- or comma-separated
 ```
 
 Each row's `cadence` names the run it belongs to: `./cron.sh daily` picks up every
-unpaused row with `cadence = 'daily'`, and a bare `./cron.sh` ignores cadence entirely.
+unpaused database-family row with `cadence = 'daily'`, and a bare `./cron.sh` ignores
+cadence entirely. The runner only selects `job_family = 'database'` rows; other families
+are left for their own runners.
 Rows run once each, in a single `ORDER BY schema_sequence, function_sequence, table_name`
 (`NULLS LAST` on the two sequence keys), with no per-cadence grouping. `schema_sequence`
 keeps the dependency order nba → statyx → fty → util; `function_sequence` orders the
@@ -108,7 +110,8 @@ are live on the NUC.
 
 Run frequency is otherwise driven from the database: `util.update_schedule.cadence`
 selects which run picks up a row, and `util.update_schedule.pause` excludes it from
-every run (including a bare `./cron.sh`). The `cadence`, `schema_sequence` and
+every run (including a bare `./cron.sh`). `job_family` is hardcoded to `database` in
+`__main__.py`, scoping this runner to its own rows. The `cadence`, `schema_sequence` and
 `function_sequence` columns are mirrored in `sql/tables/util.update_schedule.sql`, which
 rebuilds the table so its column order (… `cadence`, `schema_sequence`, `function_sequence`,
 `pause`) is reproduced — no dialect here can place a column at a position.
