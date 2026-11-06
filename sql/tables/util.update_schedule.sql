@@ -5,7 +5,12 @@
 --
 -- job_family groups rows by the kind of thing they maintain, so a runner can be pointed at
 -- one family of jobs instead of a whole schema. __main__.py hardcodes job_family = 'database';
--- every row is currently 'database'. Nullable until a second family is in use.
+-- the model runner selects job_family = 'model'. Nullable until the split is fully settled.
+--
+-- For a model row, associated_function is the repo identifier, not a SportsHub method:
+--   scs.nba.mod.player_archetypes -> nba/mod/player_archetypes/__main__.py
+-- The model runner derives the repo directory from the last dotted segment and runs the
+-- root __main__.py on the Jetson. Keep schema/table_name as human metadata only.
 --
 -- Run order: __main__.py orders by schema_sequence, then function_sequence, then
 -- table_name (NULLS LAST on the two sequence keys). schema_sequence is the rank shared by
@@ -49,8 +54,20 @@ CREATE TABLE util.update_schedule (
 );
 INSERT INTO util.update_schedule
     (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
-SELECT 'database', schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause
+SELECT COALESCE(job_family, 'database'), schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause
 FROM util.update_schedule_old;
+
+-- Seed the model rows. The copy above preserves any row already present; this
+-- keeps a fresh rebuild from dropping them.
+INSERT INTO util.update_schedule
+    (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
+SELECT 'model', 'mod', 'player_archetypes', 'scs.nba.mod.player_archetypes', 'weekly', NULL, NULL, FALSE
+WHERE NOT EXISTS (
+    SELECT 1 FROM util.update_schedule
+    WHERE job_family = 'model'
+      AND associated_function = 'scs.nba.mod.player_archetypes'
+);
+
 DROP TABLE util.update_schedule_old;
 COMMIT;
 
@@ -72,13 +89,21 @@ COMMIT;
 -- ) WITH (schema_locked = true);
 -- INSERT INTO util.update_schedule
 --     (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
--- SELECT 'database', schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause
+-- SELECT COALESCE(job_family, 'database'), schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause
 -- FROM util.update_schedule_old;
+-- INSERT INTO util.update_schedule
+--     (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
+-- SELECT 'model', 'mod', 'player_archetypes', 'scs.nba.mod.player_archetypes', 'weekly', NULL, NULL, FALSE
+-- WHERE NOT EXISTS (
+--     SELECT 1 FROM util.update_schedule
+--     WHERE job_family = 'model'
+--       AND associated_function = 'scs.nba.mod.player_archetypes'
+-- );
 -- DROP TABLE util.update_schedule_old;
 -- GRANT SELECT ON TABLE util.update_schedule TO kobe_public;
 
 -- Backfill, e.g.:
--- UPDATE util.update_schedule SET job_family = 'database';
+-- UPDATE util.update_schedule SET job_family = 'database' WHERE job_family IS NULL;
 -- UPDATE util.update_schedule SET schema_sequence = 1 WHERE schema = 'nba';
 -- UPDATE util.update_schedule SET schema_sequence = 2 WHERE schema = 'statyx';
 -- UPDATE util.update_schedule SET schema_sequence = 3 WHERE schema = 'fty';

@@ -20,7 +20,9 @@ python __main__.py daily intraday  # same; space- or comma-separated
 Each row's `cadence` names the run it belongs to: `./cron.sh daily` picks up every
 unpaused database-family row with `cadence = 'daily'`, and a bare `./cron.sh` ignores
 cadence entirely. The runner only selects `job_family = 'database'` rows; other families
-are left for their own runners.
+are left for their own runners. The model family (`job_family = 'model'`) is run by
+`nba/mod/_runner`: there, `associated_function` names the repo and the runner executes its
+root `__main__.py` on the Jetson.
 Rows run once each, in a single `ORDER BY schema_sequence, function_sequence, table_name`
 (`NULLS LAST` on the two sequence keys), with no per-cadence grouping. `schema_sequence`
 keeps the dependency order nba → statyx → fty → util; `function_sequence` orders the
