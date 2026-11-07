@@ -126,7 +126,8 @@ create or replace view nba.player_box_score_vw as
         CASE
             WHEN ej_ev.person_id IS NULL THEN 0
             ELSE 1
-        END AS ej
+        END AS ej,
+    tm.team_id
    FROM nba.league_game_schedule lgs
      LEFT JOIN ( SELECT tr_inr.season,
             tr_inr.team_slug,
@@ -147,3 +148,5 @@ create or replace view nba.player_box_score_vw as
            FROM nba.play_by_play
           WHERE play_by_play.action_type = 'Ejection'::text AND play_by_play.person_id IS NOT NULL) ej_ev ON lgs.game_id::double precision = ej_ev.game_id::double precision AND tr.player_id = ej_ev.person_id::double precision
      LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::double precision
+     LEFT JOIN nba.teams tm ON lgs.team = tm.team_slug
+  WHERE tr.player_id IS NOT NULL
