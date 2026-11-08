@@ -96,13 +96,13 @@ rather than shifting with NZ DST:
 # daily, 13:00 UTC (02:00 NZDT)
 0 13 * * *      /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
-# intraday, every 3h: 01,04,07,10,16,19,22 UTC (05,08,11,14,17,20,23 NZDT)
-0 1,4,7,10,16,19,22 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+# intraday, 3x/day: 07,16,22 UTC (20:00, 05:00, 11:00 NZDT)
+0 7,16,22 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
-# league dash: daily 16:30 UTC (05:30 NZDT);
-# intraday 01:30,03:30,17:30,19:30,21:30,23:30 UTC
+# league dash: daily 16:30 UTC (05:30 NZDT) regenerates the shared NBA base;
+# intraday 3x/day: 03:30,08:30,22:30 UTC (16:30, 21:30, 11:30 NZDT)
 30 16 * * *     PROVISION=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
-30 1,3,17,19,21,23 * * * PROVISION=1 SKIP_BASE=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
+30 3,8,22 * * * PROVISION=1 SKIP_BASE=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
 ```
 
 No environment setup needed — `cron.sh` reads `~/.config/scs_hub_credentials.ini` (or
