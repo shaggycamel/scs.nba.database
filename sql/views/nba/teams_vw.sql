@@ -1,4 +1,4 @@
-create or replace view nba.teams_vw as
+CREATE OR REPLACE VIEW nba.teams_vw AS
 
  SELECT teams.team_id,
     teams.team_slug,

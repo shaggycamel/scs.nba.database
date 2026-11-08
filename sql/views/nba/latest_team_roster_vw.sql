@@ -7,7 +7,7 @@
 -- re-creates the view this file was retired to remove. Move it out of that glob (or delete
 -- it) before the next apply.
 
-create or replace view nba.latest_team_roster_vw as
+CREATE OR REPLACE VIEW nba.latest_team_roster_vw AS
 
  WITH cte_latest_team_roster AS (
          SELECT inner_q.season,
@@ -31,9 +31,9 @@ create or replace view nba.latest_team_roster_vw as
                     tr.how_acquired,
                     tr.entry_date,
                     tr.exit_date,
-                    row_number() OVER (PARTITION BY tr.season, tr.player_id ORDER BY tr.entry_date DESC) AS rn
+                    ROW_NUMBER() OVER (PARTITION BY tr.season, tr.player_id ORDER BY tr.entry_date DESC) AS rn
                    FROM nba.team_roster tr
-                     LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::double precision) inner_q
+                     LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::DOUBLE PRECISION) inner_q
           WHERE inner_q.rn = 1
         )
  SELECT cte_latest_team_roster.season,
@@ -48,4 +48,4 @@ create or replace view nba.latest_team_roster_vw as
     id_match.yahoo_id,
     cte_latest_team_roster.how_acquired
    FROM cte_latest_team_roster
-     LEFT JOIN util.player_id_map_vw id_match ON cte_latest_team_roster.player_id = id_match.nba_id::double precision
+     LEFT JOIN util.player_id_map_vw id_match ON cte_latest_team_roster.player_id = id_match.nba_id::DOUBLE PRECISION

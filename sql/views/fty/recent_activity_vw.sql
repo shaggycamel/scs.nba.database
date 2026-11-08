@@ -1,6 +1,6 @@
-create or replace view fty.recent_activity_vw as
+CREATE OR REPLACE VIEW fty.recent_activity_vw AS
 
-select
+SELECT
     activity.season,
     activity.platform,
     activity.league_id,
@@ -10,13 +10,13 @@ select
     activity.player,
     activity.action,
     activity."timestamp"
-from fty.recent_activity activity
-    left join fty.league lgl
-        on activity.season = lgl.season
-       and activity.platform = lgl.platform
-       and activity.league_id = lgl.league_id
-    left join fty.league_competitor lc
-        on activity.season = lc.season
-       and activity.platform = lc.platform
-       and activity.league_id = lc.league_id
-       and activity.competitor_id = lc.competitor_id
+FROM fty.recent_activity activity
+    LEFT JOIN fty.league lgl
+        ON activity.season = lgl.season
+       AND activity.platform = lgl.platform
+       AND activity.league_id = lgl.league_id
+    LEFT JOIN fty.league_competitor lc
+        ON activity.season = lc.season
+       AND activity.platform = lc.platform
+       AND activity.league_id = lc.league_id
+       AND activity.competitor_id = lc.competitor_id

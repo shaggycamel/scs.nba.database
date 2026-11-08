@@ -1,4 +1,4 @@
-create or replace view fty.player_vw as
+CREATE OR REPLACE VIEW fty.player_vw AS
 
 -- Resolves a fantasy platform's player id to the canonical nba player id and name.
 -- Replaces util.conformed_player_id_RETIRED.
@@ -10,28 +10,28 @@ create or replace view fty.player_vw as
 -- which would otherwise fan a single roster row out into two. DISTINCT ON keeps the id
 -- with the most box score rows, which is the established player in every observed case.
 
-with nba_id as (
-    select distinct on (psi.player_key)
+WITH nba_id AS (
+    SELECT DISTINCT ON (psi.player_key)
         psi.player_key,
-        psi.source_id as player_id
-    from util.player_source_id psi
-    left join (
-        select player_id, count(*) as box_rows
-        from nba.player_box_score
-        group by player_id
-    ) bx on bx.player_id = psi.source_id
-    where psi.platform = 'nba'
-    order by psi.player_key, coalesce(bx.box_rows, 0) desc, psi.source_id
+        psi.source_id AS player_id
+    FROM util.player_source_id psi
+    LEFT JOIN (
+        SELECT player_id, COUNT(*) AS box_rows
+        FROM nba.player_box_score
+        GROUP BY player_id
+    ) bx ON bx.player_id = psi.source_id
+    WHERE psi.platform = 'nba'
+    ORDER BY psi.player_key, COALESCE(bx.box_rows, 0) DESC, psi.source_id
 )
 
-select
+SELECT
     src.platform,
-    src.source_id as fantasy_id,
-    src.source_name as fantasy_name,
+    src.source_id AS fantasy_id,
+    src.source_name AS fantasy_name,
     src.player_key,
     nba_id.player_id,
-    p.conformed_name as player_name
-from util.player_source_id src
-    left join nba_id on nba_id.player_key = src.player_key
-    left join util.player p on p.player_key = src.player_key
-where src.platform <> 'nba'
+    p.conformed_name AS player_name
+FROM util.player_source_id src
+    LEFT JOIN nba_id ON nba_id.player_key = src.player_key
+    LEFT JOIN util.player p ON p.player_key = src.player_key
+WHERE src.platform <> 'nba'

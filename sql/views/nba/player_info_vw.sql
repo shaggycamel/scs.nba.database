@@ -1,4 +1,4 @@
-create or replace view nba.player_info_vw as
+CREATE OR REPLACE VIEW nba.player_info_vw AS
 
  SELECT player_info.season,
     player_info.player_id,

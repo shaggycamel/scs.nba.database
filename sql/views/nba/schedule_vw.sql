@@ -1,4 +1,4 @@
-create or replace view nba.schedule_vw as
+CREATE OR REPLACE VIEW nba.schedule_vw AS
 
  SELECT lgs.season_type,
     lgs.season,

@@ -1,4 +1,4 @@
-create or replace view fty.categories_vw as
+CREATE OR REPLACE VIEW fty.categories_vw AS
 
 -- One row per league per category, tagged with the role that category plays.
 --
@@ -10,11 +10,11 @@ create or replace view fty.categories_vw as
 --   derived   - all_cat / fg_z / ft_z. Computed in R, never in league_categories.
 
 -- scored -----------------------------------------------------------------
-select
+SELECT
     lc.season,
     lc.platform,
     lc.league_id,
-    lc.category                     as platform_category,
+    lc.category                     AS platform_category,
     cl.nba_category,
     cl.fmt_category,
     cl.display_order,
@@ -22,83 +22,83 @@ select
     cl.higher_is_better,
     cl.numerator,
     cl.denominator,
-    cl.numerator is not null        as is_ratio,
-    'scored'                        as category_role,
+    cl.numerator IS NOT NULL        AS is_ratio,
+    'scored'                        AS category_role,
     lg.scoring_type,
     sf.scoring_format
-from fty.league_categories lc
-    join fty.platform_category pc
-        on pc.platform = lc.platform
-       and pc.platform_category = lc.category
-    join fty.category_label cl
-        on cl.nba_category = pc.nba_category
-    left join fty.league lg
-        on lg.season = lc.season
-       and lg.platform = lc.platform
-       and lg.league_id = lc.league_id
-    left join fty.scoring_format sf
-        on sf.platform = lg.platform
-       and sf.scoring_type = lg.scoring_type::text
+FROM fty.league_categories lc
+    JOIN fty.platform_category pc
+        ON pc.platform = lc.platform
+       AND pc.platform_category = lc.category
+    JOIN fty.category_label cl
+        ON cl.nba_category = pc.nba_category
+    LEFT JOIN fty.league lg
+        ON lg.season = lc.season
+       AND lg.platform = lc.platform
+       AND lg.league_id = lc.league_id
+    LEFT JOIN fty.scoring_format sf
+        ON sf.platform = lg.platform
+       AND sf.scoring_type = lg.scoring_type::TEXT
 
-union all
+UNION ALL
 
 -- component --------------------------------------------------------------
-select
+SELECT
     lg.season,
     lg.platform,
     lg.league_id,
-    null::text                      as platform_category,
+    NULL::TEXT                      AS platform_category,
     cl.nba_category,
     cl.fmt_category,
     cl.display_order,
-    null::double precision          as points,
+    NULL::DOUBLE PRECISION          AS points,
     cl.higher_is_better,
     cl.numerator,
     cl.denominator,
-    false                           as is_ratio,
-    'component'                     as category_role,
+    FALSE                           AS is_ratio,
+    'component'                     AS category_role,
     lg.scoring_type,
     sf.scoring_format
-from fty.league lg
-    cross join fty.category_label cl
-    left join fty.scoring_format sf
-        on sf.platform = lg.platform
-       and sf.scoring_type = lg.scoring_type::text
-where cl.nba_category in ('fgm', 'fga', 'ftm', 'fta')
-  and not exists (
-        select 1
-        from fty.league_categories lc
-            join fty.platform_category pc
-                on pc.platform = lc.platform
-               and pc.platform_category = lc.category
-        where lc.season = lg.season
-          and lc.platform = lg.platform
-          and lc.league_id = lg.league_id
-          and pc.nba_category = cl.nba_category
+FROM fty.league lg
+    CROSS JOIN fty.category_label cl
+    LEFT JOIN fty.scoring_format sf
+        ON sf.platform = lg.platform
+       AND sf.scoring_type = lg.scoring_type::TEXT
+WHERE cl.nba_category IN ('fgm', 'fga', 'ftm', 'fta')
+  AND NOT EXISTS (
+        SELECT 1
+        FROM fty.league_categories lc
+            JOIN fty.platform_category pc
+                ON pc.platform = lc.platform
+               AND pc.platform_category = lc.category
+        WHERE lc.season = lg.season
+          AND lc.platform = lg.platform
+          AND lc.league_id = lg.league_id
+          AND pc.nba_category = cl.nba_category
   )
 
-union all
+UNION ALL
 
 -- derived ----------------------------------------------------------------
-select
+SELECT
     lg.season,
     lg.platform,
     lg.league_id,
-    null::text                      as platform_category,
+    NULL::TEXT                      AS platform_category,
     cl.nba_category,
     cl.fmt_category,
     cl.display_order,
-    null::double precision          as points,
+    NULL::DOUBLE PRECISION          AS points,
     cl.higher_is_better,
     cl.numerator,
     cl.denominator,
-    cl.numerator is not null        as is_ratio,
-    'derived'                       as category_role,
+    cl.numerator IS NOT NULL        AS is_ratio,
+    'derived'                       AS category_role,
     lg.scoring_type,
     sf.scoring_format
-from fty.league lg
-    cross join fty.category_label cl
-    left join fty.scoring_format sf
-        on sf.platform = lg.platform
-       and sf.scoring_type = lg.scoring_type::text
-where cl.nba_category in ('all_cat', 'fg_z', 'ft_z')
+FROM fty.league lg
+    CROSS JOIN fty.category_label cl
+    LEFT JOIN fty.scoring_format sf
+        ON sf.platform = lg.platform
+       AND sf.scoring_type = lg.scoring_type::TEXT
+WHERE cl.nba_category IN ('all_cat', 'fg_z', 'ft_z')

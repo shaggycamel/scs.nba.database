@@ -1,4 +1,4 @@
-create or replace view fty.matchup_box_score_vw_retired as
+CREATE OR REPLACE VIEW fty.matchup_box_score_vw_retired AS
 
 -- Retired: superseded by matchup_box_score_vw, which keeps one row per category.
 -- Pivots the long matchup_box_score back to one column per stat.
@@ -6,42 +6,42 @@ create or replace view fty.matchup_box_score_vw_retired as
 -- the R package needs them for every league, and the fg_pct/ft_pct ratios are derived
 -- here rather than stored.
 
-select
+SELECT
     bs.season,
     bs.platform,
     bs.league_id,
     bs.competitor_id,
     bs.matchup,
-    max(bs.value) filter (where bs.category = 'pts')   as pts,
-    max(bs.value) filter (where bs.category = 'blk')   as blk,
-    max(bs.value) filter (where bs.category = 'stl')   as stl,
-    max(bs.value) filter (where bs.category = 'ast')   as ast,
-    max(bs.value) filter (where bs.category = 'reb')   as reb,
-    max(bs.value) filter (where bs.category = 'tov')   as tov,
-    max(bs.value) filter (where bs.category = 'fgm')   as fgm,
-    max(bs.value) filter (where bs.category = 'fga')   as fga,
-    max(bs.value) filter (where bs.category = 'ftm')   as ftm,
-    max(bs.value) filter (where bs.category = 'fta')   as fta,
-    max(bs.value) filter (where bs.category = 'fg3_m') as fg3_m,
-    coalesce(
-        max(bs.value) filter (where bs.category = 'fgm')
-        / nullif(max(bs.value) filter (where bs.category = 'fga'), 0),
+    MAX(bs.value) FILTER (WHERE bs.category = 'pts')   AS pts,
+    MAX(bs.value) FILTER (WHERE bs.category = 'blk')   AS blk,
+    MAX(bs.value) FILTER (WHERE bs.category = 'stl')   AS stl,
+    MAX(bs.value) FILTER (WHERE bs.category = 'ast')   AS ast,
+    MAX(bs.value) FILTER (WHERE bs.category = 'reb')   AS reb,
+    MAX(bs.value) FILTER (WHERE bs.category = 'tov')   AS tov,
+    MAX(bs.value) FILTER (WHERE bs.category = 'fgm')   AS fgm,
+    MAX(bs.value) FILTER (WHERE bs.category = 'fga')   AS fga,
+    MAX(bs.value) FILTER (WHERE bs.category = 'ftm')   AS ftm,
+    MAX(bs.value) FILTER (WHERE bs.category = 'fta')   AS fta,
+    MAX(bs.value) FILTER (WHERE bs.category = 'fg3_m') AS fg3_m,
+    COALESCE(
+        MAX(bs.value) FILTER (WHERE bs.category = 'fgm')
+        / NULLIF(MAX(bs.value) FILTER (WHERE bs.category = 'fga'), 0),
         0
-    ) as fg_pct,
-    coalesce(
-        max(bs.value) filter (where bs.category = 'ftm')
-        / nullif(max(bs.value) filter (where bs.category = 'fta'), 0),
+    ) AS fg_pct,
+    COALESCE(
+        MAX(bs.value) FILTER (WHERE bs.category = 'ftm')
+        / NULLIF(MAX(bs.value) FILTER (WHERE bs.category = 'fta'), 0),
         0
-    ) as ft_pct,
-    max(bs.value) filter (where bs.category = 'dd2')   as dd2,
-    max(bs.value) filter (where bs.category = 'td3')   as td3,
+    ) AS ft_pct,
+    MAX(bs.value) FILTER (WHERE bs.category = 'dd2')   AS dd2,
+    MAX(bs.value) FILTER (WHERE bs.category = 'td3')   AS td3,
     lc.competitor_abbrev,
     lc.competitor_name
-from fty.matchup_box_score bs
-    left join fty.league_competitor lc
-        on bs.season = lc.season
-       and bs.platform = lc.platform
-       and bs.league_id = lc.league_id
-       and bs.competitor_id = lc.competitor_id
-group by bs.season, bs.platform, bs.league_id, bs.competitor_id, bs.matchup,
+FROM fty.matchup_box_score bs
+    LEFT JOIN fty.league_competitor lc
+        ON bs.season = lc.season
+       AND bs.platform = lc.platform
+       AND bs.league_id = lc.league_id
+       AND bs.competitor_id = lc.competitor_id
+GROUP BY bs.season, bs.platform, bs.league_id, bs.competitor_id, bs.matchup,
          lc.competitor_abbrev, lc.competitor_name

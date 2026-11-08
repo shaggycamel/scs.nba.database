@@ -18,3 +18,6 @@ __pycache__/
 # notebook
 .ipynb_checkpoints/
 .DS_Store
+
+# firecrawl CLI output
+.firecrawl/

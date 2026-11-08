@@ -75,9 +75,9 @@ def setting(env_name, section, key, default=None):
 DB_CON = setting('DB_CON', 'runtime', 'db_con')
 if not DB_CON:
     raise RuntimeError(
-        f"No database connection configured. Add a [runtime] section with "
-        f"db_con = cockroach (or postgres) to {INI_PATH}, or set DB_CON in the "
-        "environment. Either must name a section of that same file."
+        f'No database connection configured. Add a [runtime] section with '
+        f'db_con = cockroach (or postgres) to {INI_PATH}, or set DB_CON in the '
+        'environment. Either must name a section of that same file.'
     )
 
 hub = SportsHub(db_con=DB_CON, ini_path=INI_PATH)
@@ -283,7 +283,10 @@ def main():
 
     if log_write_errors:
         failures.append(
-            ('util.update_log', f'{len(log_write_errors)} log write(s) failed; first error: {log_write_errors[0]}')
+            (
+                'util.update_log',
+                f'{len(log_write_errors)} log write(s) failed; first error: {log_write_errors[0]}',
+            )
         )
 
     if failures:
@@ -292,6 +295,7 @@ def main():
         sys.exit(1)
 
     log.info('all tables successfully updated')
+
 
 if __name__ == '__main__':
     main()

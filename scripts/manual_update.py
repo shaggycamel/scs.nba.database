@@ -9,11 +9,11 @@ hub = SportsHub('cockroach-write')
 
 # ============================ nba ============================================
 # hub.nba.get_game_schedule()
-hub.nba.get_game_schedule()                        # full-season refresh
-hub.nba.get_player_info()                           # one call per player, ~1s each
+hub.nba.get_game_schedule()  # full-season refresh
+hub.nba.get_player_info()  # one call per player, ~1s each
 # hub.nba.get_team_roster()
-hub.nba.get_team_roster(pre_season=True)          # initial load, entry_date left null
-hub.nba.get_player_season_stats()                   # one call per player, ~1s each
+hub.nba.get_team_roster(pre_season=True)  # initial load, entry_date left null
+hub.nba.get_player_season_stats()  # one call per player, ~1s each
 hub.nba.get_player_box_score()
 hub.nba.get_team_box_score()
 hub.nba.get_play_by_play()
@@ -26,7 +26,7 @@ hub.statyx.get_schedule()
 hub.statyx.get_standings()
 hub.statyx.get_game_stats()
 hub.statyx.get_advanced_stats()
-hub.statyx.get_contracts()                          # no season filter; current year only
+hub.statyx.get_contracts()  # no season filter; current year only
 hub.statyx.get_player_info()
 hub.statyx.get_team_roster()
 hub.statyx.get_play_types()
@@ -45,7 +45,7 @@ hub.statyx.get_team_assist_defense()
 
 
 # ============================ fty ============================================
-hub.fty.connect_leagues()                           # opens a live session per league
+hub.fty.connect_leagues()  # opens a live session per league
 # hub.fty.connect_leagues(season="2024-25")         # backfill another season
 
 
@@ -56,7 +56,7 @@ hub.fty.get_league_matchup()
 hub.fty.get_league_matchup_dates()
 hub.fty.get_competitor_roster()
 hub.fty.get_free_agents()
-hub.fty.get_recent_activity() 
+hub.fty.get_recent_activity()
 hub.fty.get_league_byes()
 hub.fty.get_matchup_box_score()
 

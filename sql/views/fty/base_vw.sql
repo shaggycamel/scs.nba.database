@@ -1,6 +1,6 @@
-create or replace view fty.base_vw as
+CREATE OR REPLACE VIEW fty.base_vw AS
 
-select
+SELECT
     lc.season,
     lc.platform,
     lc.league_id,
@@ -11,9 +11,9 @@ select
     lc.division_id,
     lc.division_name,
     lg.starter_count
-from fty.league_competitor lc
-    left join fty.league lg
-        on lc.league_id = lg.league_id
-       and lc.season = lg.season
-       and lc.platform = lg.platform
-order by lower(lc.competitor_name)
+FROM fty.league_competitor lc
+    LEFT JOIN fty.league lg
+        ON lc.league_id = lg.league_id
+       AND lc.season = lg.season
+       AND lc.platform = lg.platform
+ORDER BY LOWER(lc.competitor_name)

@@ -1,4 +1,4 @@
-create or replace view nba.team_roster_vw as
+CREATE OR REPLACE VIEW nba.team_roster_vw AS
 
 -- Player naming and cross platform ids come from util.player_id_map_vw, replacing
 -- util.conformed_player_id_RETIRED. nba.team_roster.player_id is double precision,
@@ -17,11 +17,11 @@ SELECT tr.season,
     COALESCE(tr.entry_date, kd.begin_date) AS entry_date,
     COALESCE(tr.exit_date, kd.end_date) AS exit_date
    FROM nba.team_roster tr
-     LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::double precision
-     LEFT JOIN statyx.contracts ct ON ct.player_id = nm.statyx_id::bigint AND ct.season = tr.season
+     LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::DOUBLE PRECISION
+     LEFT JOIN statyx.contracts ct ON ct.player_id = nm.statyx_id::BIGINT AND ct.season = tr.season
      LEFT JOIN ( SELECT key_dates.season,
             key_dates.season_type,
             key_dates.begin_date,
             key_dates.end_date
            FROM nba.key_dates
-          WHERE key_dates.season_type = 'Regular Season'::text) kd ON tr.season = kd.season
+          WHERE key_dates.season_type = 'Regular Season'::TEXT) kd ON tr.season = kd.season

@@ -1,12 +1,9 @@
 from scs_hub import SportsHub
 
-# con_from = SportsHub("postgres")
-# con_to = SportsHub("cockroach-write")
+con_from = SportsHub('postgres')
+con_to = SportsHub('cockroach-write')
 
-seasons = [
-    f"{year}-{str(year + 1)[2:]}"
-    for year in range(2020, 2027)
-]
+seasons = [f'{year}-{str(year + 1)[2:]}' for year in range(2020, 2027)]
 
 for season in seasons:
     query = f"""
@@ -22,8 +19,8 @@ for season in seasons:
     df = con_from.db.read(query)
 
     if df.is_empty():
-        print(f"{season}: no rows")
+        print(f'{season}: no rows')
         continue
 
-    con_to.db.write(df, "play_by_play", "nba")
-    print(f"{season}: appended {df.height:,} rows")
+    con_to.db.write(df, 'play_by_play', 'nba')
+    print(f'{season}: appended {df.height:,} rows')

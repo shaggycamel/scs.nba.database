@@ -1,4 +1,4 @@
-create or replace view fty.league_schedule_vw as
+CREATE OR REPLACE VIEW fty.league_schedule_vw AS
 
 -- league_matchup.opponent_id is double precision in fty; cast to bigint so consumers
 -- join cleanly against competitor_id (fty's view cast the other direction instead).
@@ -8,7 +8,7 @@ create or replace view fty.league_schedule_vw as
 --   2025-26 - no league_matchup row at all; the fact lives only in league_byes, so those
 --             competitors have to be unioned back in or they vanish from the schedule
 
-select
+SELECT
     mup_dates.season,
     mup_dates.platform,
     mup_dates.league_id,
@@ -16,18 +16,18 @@ select
     mup_dates.matchup_start,
     mup_dates.matchup_end,
     mup.competitor_id,
-    mup.opponent_id::bigint as opponent_id,
-    mup.competitor_id is not null and mup.opponent_id is null as is_bye
-from fty.league_matchup_dates mup_dates
-    left join fty.league_matchup mup
-        on mup_dates.season = mup.season
-       and mup_dates.platform = mup.platform
-       and mup_dates.league_id = mup.league_id
-       and mup_dates.matchup_period = mup.matchup_period
+    mup.opponent_id::BIGINT AS opponent_id,
+    mup.competitor_id IS NOT NULL AND mup.opponent_id IS NULL AS is_bye
+FROM fty.league_matchup_dates mup_dates
+    LEFT JOIN fty.league_matchup mup
+        ON mup_dates.season = mup.season
+       AND mup_dates.platform = mup.platform
+       AND mup_dates.league_id = mup.league_id
+       AND mup_dates.matchup_period = mup.matchup_period
 
-union all
+UNION ALL
 
-select
+SELECT
     mup_dates.season,
     mup_dates.platform,
     mup_dates.league_id,
@@ -35,11 +35,11 @@ select
     mup_dates.matchup_start,
     mup_dates.matchup_end,
     bye.competitor_id,
-    null::bigint as opponent_id,
-    true as is_bye
-from fty.league_byes bye
-    join fty.league_matchup_dates mup_dates
-        on mup_dates.season = bye.season::text
-       and mup_dates.platform = bye.platform::text
-       and mup_dates.league_id = bye.league_id
-       and mup_dates.matchup_period = bye.matchup_period
+    NULL::BIGINT AS opponent_id,
+    TRUE AS is_bye
+FROM fty.league_byes bye
+    JOIN fty.league_matchup_dates mup_dates
+        ON mup_dates.season = bye.season::TEXT
+       AND mup_dates.platform = bye.platform::TEXT
+       AND mup_dates.league_id = bye.league_id
+       AND mup_dates.matchup_period = bye.matchup_period

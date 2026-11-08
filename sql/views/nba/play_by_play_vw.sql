@@ -1,4 +1,4 @@
-create or replace view nba.play_by_play_vw as
+CREATE OR REPLACE VIEW nba.play_by_play_vw AS
 
  SELECT lgs.season,
     lgs.season_type,
@@ -28,4 +28,4 @@ create or replace view nba.play_by_play_vw as
     pbp.location,
     pbp.video_available
    FROM nba.play_by_play pbp
-     LEFT JOIN nba.league_game_schedule lgs ON pbp.game_id::double precision = lgs.game_id::double precision;
+     LEFT JOIN nba.league_game_schedule lgs ON pbp.game_id::DOUBLE PRECISION = lgs.game_id::DOUBLE PRECISION;

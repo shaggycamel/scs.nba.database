@@ -1,4 +1,4 @@
-create or replace view nba.player_box_score_vw as
+CREATE OR REPLACE VIEW nba.player_box_score_vw AS
 
  SELECT lgs.season,
     lgs.season_type,
@@ -29,23 +29,23 @@ create or replace view nba.player_box_score_vw as
         CASE
             WHEN (
             CASE
-                WHEN pbs.pts >= 10::double precision THEN 1
+                WHEN pbs.pts >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.reb >= 10::double precision THEN 1
+                WHEN pbs.reb >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.ast >= 10::double precision THEN 1
+                WHEN pbs.ast >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.stl >= 10::double precision THEN 1
+                WHEN pbs.stl >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.blk >= 10::double precision THEN 1
+                WHEN pbs.blk >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END) >= 2 THEN 1
             ELSE 0
@@ -53,23 +53,23 @@ create or replace view nba.player_box_score_vw as
         CASE
             WHEN (
             CASE
-                WHEN pbs.pts >= 10::double precision THEN 1
+                WHEN pbs.pts >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.reb >= 10::double precision THEN 1
+                WHEN pbs.reb >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.ast >= 10::double precision THEN 1
+                WHEN pbs.ast >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.stl >= 10::double precision THEN 1
+                WHEN pbs.stl >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.blk >= 10::double precision THEN 1
+                WHEN pbs.blk >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END) >= 3 THEN 1
             ELSE 0
@@ -102,23 +102,23 @@ create or replace view nba.player_box_score_vw as
         CASE
             WHEN (
             CASE
-                WHEN pbs.pts >= 10::double precision THEN 1
+                WHEN pbs.pts >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.reb >= 10::double precision THEN 1
+                WHEN pbs.reb >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.ast >= 10::double precision THEN 1
+                WHEN pbs.ast >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.stl >= 10::double precision THEN 1
+                WHEN pbs.stl >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END +
             CASE
-                WHEN pbs.blk >= 10::double precision THEN 1
+                WHEN pbs.blk >= 10::DOUBLE PRECISION THEN 1
                 ELSE 0
             END) >= 4 THEN 1
             ELSE 0
@@ -137,16 +137,16 @@ create or replace view nba.player_box_score_vw as
             COALESCE(tr_inr.exit_date, kd.end_date) AS exit_date
            FROM nba.team_roster tr_inr
              LEFT JOIN ( SELECT season,
-                    min(begin_date) AS begin_date,
-                    max(end_date) AS end_date
+                    MIN(begin_date) AS begin_date,
+                    MAX(end_date) AS end_date
                    FROM nba.key_dates
                   GROUP BY season) kd ON tr_inr.season = kd.season) tr ON lgs.season = tr.season AND lgs.team = tr.team_slug AND lgs.game_date >= tr.entry_date AND lgs.game_date < tr.exit_date
-     LEFT JOIN nba.injuries inj ON lgs.game_id = inj.game_id AND lgs.game_date = inj.game_date AND tr.player_id = inj.nba_id::double precision
-     LEFT JOIN nba.player_box_score pbs ON lgs.game_id = pbs.game_id AND tr.player_id = pbs.player_id::double precision
+     LEFT JOIN nba.injuries inj ON lgs.game_id = inj.game_id AND lgs.game_date = inj.game_date AND tr.player_id = inj.nba_id::DOUBLE PRECISION
+     LEFT JOIN nba.player_box_score pbs ON lgs.game_id = pbs.game_id AND tr.player_id = pbs.player_id::DOUBLE PRECISION
      LEFT JOIN ( SELECT DISTINCT play_by_play.game_id,
             play_by_play.person_id
            FROM nba.play_by_play
-          WHERE play_by_play.action_type = 'Ejection'::text AND play_by_play.person_id IS NOT NULL) ej_ev ON lgs.game_id::double precision = ej_ev.game_id::double precision AND tr.player_id = ej_ev.person_id::double precision
-     LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::double precision
+          WHERE play_by_play.action_type = 'Ejection'::TEXT AND play_by_play.person_id IS NOT NULL) ej_ev ON lgs.game_id::DOUBLE PRECISION = ej_ev.game_id::DOUBLE PRECISION AND tr.player_id = ej_ev.person_id::DOUBLE PRECISION
+     LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::DOUBLE PRECISION
      LEFT JOIN nba.teams tm ON lgs.team = tm.team_slug
   WHERE tr.player_id IS NOT NULL

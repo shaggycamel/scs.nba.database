@@ -1,4 +1,4 @@
-create or replace view util.player_id_map_vw as
+CREATE OR REPLACE VIEW util.player_id_map_vw AS
 
 -- One row per player, with that player's id and name on each source platform.
 -- Replaces util.conformed_player_id_RETIRED, built from util.player + util.player_source_id.
@@ -12,55 +12,55 @@ create or replace view util.player_id_map_vw as
 --   3. for nba, the id with the most box score rows (the established player)
 --   4. the highest id, as a deterministic tie break
 
-with dir as (
-    select distinct platform, source_id
-    from util.player_directory_vw
+WITH dir AS (
+    SELECT DISTINCT platform, source_id
+    FROM util.player_directory_vw
 ),
 
-box as (
-    select player_id, count(*) as box_rows
-    from nba.player_box_score
-    group by player_id
+box AS (
+    SELECT player_id, COUNT(*) AS box_rows
+    FROM nba.player_box_score
+    GROUP BY player_id
 ),
 
-ranked as (
-    select
+ranked AS (
+    SELECT
         psi.player_key,
         psi.platform,
         psi.source_id,
         psi.source_name,
-        row_number() over (
-            partition by psi.player_key, psi.platform
-            order by
-                (dir.source_id is not null) desc,
-                (psi.source_name = p.conformed_name) desc,
-                coalesce(box.box_rows, 0) desc,
-                psi.source_id desc
-        ) as rn
-    from util.player_source_id psi
-        join util.player p
-            on p.player_key = psi.player_key
-        left join dir
-            on dir.platform = psi.platform
-           and dir.source_id = psi.source_id
-        left join box
-            on psi.platform = 'nba'
-           and box.player_id = psi.source_id
+        ROW_NUMBER() OVER (
+            PARTITION BY psi.player_key, psi.platform
+            ORDER BY
+                (dir.source_id IS NOT NULL) DESC,
+                (psi.source_name = p.conformed_name) DESC,
+                COALESCE(box.box_rows, 0) DESC,
+                psi.source_id DESC
+        ) AS rn
+    FROM util.player_source_id psi
+        JOIN util.player p
+            ON p.player_key = psi.player_key
+        LEFT JOIN dir
+            ON dir.platform = psi.platform
+           AND dir.source_id = psi.source_id
+        LEFT JOIN box
+            ON psi.platform = 'nba'
+           AND box.player_id = psi.source_id
 )
 
-select
+SELECT
     p.player_key,
     p.conformed_name,
-    max(r.source_id)   filter (where r.platform = 'nba')    as nba_id,
-    max(r.source_name) filter (where r.platform = 'nba')    as nba_name,
-    max(r.source_id)   filter (where r.platform = 'espn')   as espn_id,
-    max(r.source_name) filter (where r.platform = 'espn')   as espn_name,
-    max(r.source_id)   filter (where r.platform = 'yahoo')  as yahoo_id,
-    max(r.source_name) filter (where r.platform = 'yahoo')  as yahoo_name,
-    max(r.source_id)   filter (where r.platform = 'statyx') as statyx_id,
-    max(r.source_name) filter (where r.platform = 'statyx') as statyx_name
-from util.player p
-    left join ranked r
-        on r.player_key = p.player_key
-       and r.rn = 1
-group by p.player_key, p.conformed_name
+    MAX(r.source_id)   FILTER (WHERE r.platform = 'nba')    AS nba_id,
+    MAX(r.source_name) FILTER (WHERE r.platform = 'nba')    AS nba_name,
+    MAX(r.source_id)   FILTER (WHERE r.platform = 'espn')   AS espn_id,
+    MAX(r.source_name) FILTER (WHERE r.platform = 'espn')   AS espn_name,
+    MAX(r.source_id)   FILTER (WHERE r.platform = 'yahoo')  AS yahoo_id,
+    MAX(r.source_name) FILTER (WHERE r.platform = 'yahoo')  AS yahoo_name,
+    MAX(r.source_id)   FILTER (WHERE r.platform = 'statyx') AS statyx_id,
+    MAX(r.source_name) FILTER (WHERE r.platform = 'statyx') AS statyx_name
+FROM util.player p
+    LEFT JOIN ranked r
+        ON r.player_key = p.player_key
+       AND r.rn = 1
+GROUP BY p.player_key, p.conformed_name

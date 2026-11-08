@@ -8,6 +8,8 @@
 -- column names, so there is nothing to rename. Hand-applied like the rest of
 -- sql/tables; the database is the system of record and this file is the mirror.
 
+BEGIN;
+
 DELETE FROM util.table_column_order
 WHERE schema = 'fty' AND table_name = 'competitor_roster';
 
@@ -27,3 +29,5 @@ VALUES
 ('fty', 'competitor_roster', 'player_injury_status',    NULL, 11),
 ('fty', 'competitor_roster', 'player_acquisition_type', NULL, 12),
 ('fty', 'competitor_roster', 'lineup_slot',             NULL, 13);
+
+COMMIT;

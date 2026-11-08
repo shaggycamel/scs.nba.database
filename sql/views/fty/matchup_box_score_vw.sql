@@ -1,4 +1,4 @@
-create or replace view fty.matchup_box_score_vw as
+CREATE OR REPLACE VIEW fty.matchup_box_score_vw AS
 
 -- Long form matchup results, one row per competitor per category.
 -- Reads scored categories plus the shooting components (fgm/fga/ftm/fta) from
@@ -7,44 +7,44 @@ create or replace view fty.matchup_box_score_vw as
 -- matchup_box_score even when the league does not score them; a points league gets
 -- fantasy_points instead.
 
-select
+SELECT
     c.season,
     c.platform,
     c.league_id,
     bs.matchup,
     bs.competitor_id,
-    c.nba_category as category,
+    c.nba_category AS category,
     c.fmt_category,
     c.display_order,
     c.scoring_type,
     c.scoring_format,
     c.higher_is_better,
-    case
-        when c.is_ratio then coalesce(num.value / nullif(den.value, 0), 0)
-        else bs.value
-    end as value,
-    case
-        when c.points is not null then bs.value * c.points
-        else null::double precision
-    end as fantasy_points
-from fty.categories_vw c
-    join fty.matchup_box_score bs
-        on bs.season = c.season
-       and bs.platform = c.platform
-       and bs.league_id = c.league_id
-       and bs.category = coalesce(c.numerator, c.nba_category)
-    left join fty.matchup_box_score num
-        on num.season = c.season
-       and num.platform = c.platform
-       and num.league_id = c.league_id
-       and num.matchup = bs.matchup
-       and num.competitor_id = bs.competitor_id
-       and num.category = c.numerator
-    left join fty.matchup_box_score den
-        on den.season = c.season
-       and den.platform = c.platform
-       and den.league_id = c.league_id
-       and den.matchup = bs.matchup
-       and den.competitor_id = bs.competitor_id
-       and den.category = c.denominator
-where c.category_role in ('scored', 'component')
+    CASE
+        WHEN c.is_ratio THEN COALESCE(num.value / NULLIF(den.value, 0), 0)
+        ELSE bs.value
+    END AS value,
+    CASE
+        WHEN c.points IS NOT NULL THEN bs.value * c.points
+        ELSE NULL::DOUBLE PRECISION
+    END AS fantasy_points
+FROM fty.categories_vw c
+    JOIN fty.matchup_box_score bs
+        ON bs.season = c.season
+       AND bs.platform = c.platform
+       AND bs.league_id = c.league_id
+       AND bs.category = COALESCE(c.numerator, c.nba_category)
+    LEFT JOIN fty.matchup_box_score num
+        ON num.season = c.season
+       AND num.platform = c.platform
+       AND num.league_id = c.league_id
+       AND num.matchup = bs.matchup
+       AND num.competitor_id = bs.competitor_id
+       AND num.category = c.numerator
+    LEFT JOIN fty.matchup_box_score den
+        ON den.season = c.season
+       AND den.platform = c.platform
+       AND den.league_id = c.league_id
+       AND den.matchup = bs.matchup
+       AND den.competitor_id = bs.competitor_id
+       AND den.category = c.denominator
+WHERE c.category_role IN ('scored', 'component')

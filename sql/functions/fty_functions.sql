@@ -26,8 +26,8 @@ SELECT 'cus_' || string_agg(
     ),
     ''
   )
-FROM cfg,
-  generate_series(1, p_id_length);
+FROM cfg
+  CROSS JOIN generate_series(1, p_id_length);
 
 $function$
 ;

@@ -1,4 +1,4 @@
-create or replace view util.player_directory_vw as
+CREATE OR REPLACE VIEW util.player_directory_vw AS
 
 -- Every (season, platform, source_id) a player is known by, across nba, statyx and the
 -- fantasy platforms. Feeds util.active_player_vw and util.unmatched_player_source_vw.
@@ -8,54 +8,54 @@ create or replace view util.player_directory_vw as
 -- Yahoo league (121793) no longer appears here. Its id mappings remain in
 -- util.player_source_id.
 
-select
+SELECT
     s.season,
-    'nba'::text as platform,
-    b.player_id as source_id,
-    b.player_name as source_name
-from nba.player_box_score b
-    join (
-        select distinct game_id, season
-        from nba.league_game_schedule
-    ) s using (game_id)
-where b.player_id is not null and b.player_id < 100000000
+    'nba'::TEXT AS platform,
+    b.player_id AS source_id,
+    b.player_name AS source_name
+FROM nba.player_box_score b
+    JOIN (
+        SELECT DISTINCT game_id, season
+        FROM nba.league_game_schedule
+    ) s USING (game_id)
+WHERE b.player_id IS NOT NULL AND b.player_id < 100000000
 
-union
+UNION
 
-select
+SELECT
     r.season,
-    'nba'::text as platform,
-    r.player_id::bigint as source_id,
-    r.player as source_name
-from nba.team_roster r
-where r.player_id is not null
+    'nba'::TEXT AS platform,
+    r.player_id::BIGINT AS source_id,
+    r.player AS source_name
+FROM nba.team_roster r
+WHERE r.player_id IS NOT NULL
 
-union
+UNION
 
-select
+SELECT
     pi.season,
-    'statyx'::text as platform,
-    pi.player_id as source_id,
-    pi.full_name as source_name
-from statyx.player_info pi
-where pi.player_id is not null
+    'statyx'::TEXT AS platform,
+    pi.player_id AS source_id,
+    pi.full_name AS source_name
+FROM statyx.player_info pi
+WHERE pi.player_id IS NOT NULL
 
-union
+UNION
 
-select
+SELECT
     fa.season,
-    lower(fa.platform) as platform,
-    fa.player_id as source_id,
-    fa.player_name as source_name
-from fty.free_agents fa
-where fa.player_id is not null
+    LOWER(fa.platform) AS platform,
+    fa.player_id AS source_id,
+    fa.player_name AS source_name
+FROM fty.free_agents fa
+WHERE fa.player_id IS NOT NULL
 
-union
+UNION
 
-select
+SELECT
     cr.season,
-    lower(cr.platform) as platform,
-    cr.player_fantasy_id as source_id,
-    cr.player_name as source_name
-from fty.competitor_roster cr
-where cr.player_fantasy_id is not null
+    LOWER(cr.platform) AS platform,
+    cr.player_fantasy_id AS source_id,
+    cr.player_name AS source_name
+FROM fty.competitor_roster cr
+WHERE cr.player_fantasy_id IS NOT NULL
