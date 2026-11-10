@@ -64,6 +64,13 @@ A one-off backfill on 2026-11-10 filled 11,429 of the 11,435 null `nba_id`
 values in `nba.injuries`; 6 rows remain (Kyle Mangas 5, Jeenathan Williams 1).
 The pre-update values are in `scratch.injuries_nba_id_backup_20261110`.
 
+On 2026-11-10 the `player_box_score_vw` and `team_roster_vw` season windows
+were widened from regular season only to the full schedule (preseason,
+regular season and playoffs). The injury model needs playoff box rows, and the
+regular-season-only window was censoring playoff returns. `player_box_score_vw`
+now has 810,633 rows. Both views were reapplied to Cockroach and
+`db.regrant_read()` ran again.
+
 ## Completeness (Cockroach live views, 2026-11-10)
 
 Measured after the apply and the injury backfill, against the real view
@@ -72,7 +79,7 @@ definitions.
 | View | Rows | Null `player_name` | Null `raw_name` |
 |---|---:|---:|---:|
 | `injuries_vw` | 64,269 | 6 | 0 |
-| `player_box_score_vw` | 717,063 | 551 | 0 |
+| `player_box_score_vw` | 810,633 | 615 | 0 |
 | `team_roster_vw` | 10,877 | 10 | 0 |
 | `player_info_vw` | 7,248 | 3,140 | 1 |
 | `play_by_play_vw` | 8,259,647 | 675,740 | 0 |
@@ -89,11 +96,13 @@ Where the nulls come from:
   Jeenathan Williams 1). Note that `active_player_vw` is a per-season fetch-id
   view, not a general name directory; it covered 400/407 names because
   `player_directory_vw` already contains most of them.
-- `player_box_score_vw` / `team_roster_vw` / `latest_team_roster_vw`: 551 / 10 /
+- `player_box_score_vw` / `team_roster_vw` / `latest_team_roster_vw`: 615 / 10 /
   7 rows over the same four source ids — Chris Johnson, Chris Wright, Mike
-  James and Tony Mitchell. All four exist in `util.player_source_id`, but each
-  `player_key` has two NBA ids and `player_id_map_vw` exposes only one, so the
-  join misses the other. Across util, 39 player keys carry two NBA ids.
+  James and Tony Mitchell. The 615 includes the playoff/preseason rows added
+  when the box view's season window was widened. All four exist in
+  `util.player_source_id`, but each `player_key` has two NBA ids and
+  `player_id_map_vw` exposes only one, so the join misses the other. Across
+  util, 39 player keys carry two NBA ids.
 - `player_info_vw`: 3,140 rows. 3,135 are inactive historical players absent
   from util altogether (all `rosterstatus = 'Inactive'`, from the 2024-25
   snapshot); the other 5 are the shadowed ids above (plus Marcus Williams).
@@ -147,6 +156,9 @@ Done on 2026-11-10:
   through `cockroach-read`.
 - Committed as `aee62c5` and pushed to `main` and `views-cleanup`.
 - Backfilled `nba.injuries.nba_id` (11,429 of 11,435 rows; 6 remain).
+- Widened `player_box_score_vw` and `team_roster_vw` to the full schedule
+  window so playoff and preseason games are covered; reapplied both to
+  Cockroach and regranted.
 
 Remaining:
 

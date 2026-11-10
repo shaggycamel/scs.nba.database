@@ -141,7 +141,6 @@ CREATE OR REPLACE VIEW nba.player_box_score_vw AS
                     MIN(game_date) AS begin_date,
                     MAX(game_date) + 1 AS end_date
                    FROM nba.league_game_schedule
-                  WHERE season_type = 'Regular Season'::TEXT
                   GROUP BY season) kd ON tr_inr.season = kd.season) tr ON lgs.season = tr.season AND lgs.team = tr.team_slug AND lgs.game_date >= tr.entry_date AND lgs.game_date < tr.exit_date
      LEFT JOIN nba.injuries inj ON lgs.game_id = inj.game_id AND lgs.game_date = inj.game_date AND tr.player_id = inj.nba_id::DOUBLE PRECISION
      LEFT JOIN nba.player_box_score pbs ON lgs.game_id = pbs.game_id AND tr.player_id = pbs.player_id::DOUBLE PRECISION

@@ -24,5 +24,4 @@ SELECT tr.season,
             MIN(league_game_schedule.game_date) AS begin_date,
             MAX(league_game_schedule.game_date) + 1 AS end_date
            FROM nba.league_game_schedule
-          WHERE league_game_schedule.season_type = 'Regular Season'::TEXT
           GROUP BY league_game_schedule.season) kd ON tr.season = kd.season
