@@ -1,6 +1,6 @@
 # View Name Cleanup Instructions
 
-Status: 2026-11-11. Branch: `views-cleanup`.
+Status: 2026-11-10. Branch: `main` (merged from `views-cleanup` at `aee62c5`).
 
 Goal: every view in the `nba` view layer exposes two adjacent name columns.
 `player_name` is the display name from
@@ -9,7 +9,7 @@ name. There is no fallback: when the crosswalk is missing, `player_name` is
 NULL and `raw_name` still carries the source value. `raw_name` always sits
 immediately after `player_name`.
 
-## Files changed on this branch
+## Files changed
 
 - `sql/views/nba/injuries_vw.sql`
 - `sql/views/nba/player_box_score_vw.sql`
@@ -48,16 +48,15 @@ populated and matches `team_roster_vw`. On `latest_team_roster_vw` the existing
 
 ## Current status
 
-The six files are rewritten to the two-column form. Their definitions were
-validated by creating them in a throwaway `scratch_views` schema on Cockroach
-(`cockroach-write`) and querying them; the schema was dropped afterwards. They
-have **not** been applied to the real views yet: local Postgres is not running
-on this host, and the Cockroach apply is waiting on the util-name decision
-below. Cockroach still has the fallback `injuries_vw`; the other five real
-views still have their old definitions.
+The six files are on `main` at commit `aee62c5` and were applied to the real
+Cockroach views on 2026-11-10. All six were dropped and recreated (a mid-view
+`raw_name` and the `latest_team_roster_vw.player` rename make `CREATE OR
+REPLACE` insufficient), then `db.regrant_read()` ran. `kobe_public` can
+`SELECT` all six through `cockroach-read`.
 
-The old local Postgres build (fallback, before this rewrite) had these row
-counts. Expect small drift when it is re-verified:
+Local Postgres is still not running on this host, so it has neither the new
+views nor the injury backfill. The old local fallback build had these row
+counts; expect small drift when it is re-verified:
 63,767 injuries; 722,633 box score; 10,875 team roster; 7,248 player info;
 8,195,575 play-by-play; 9,657 latest roster.
 
@@ -65,7 +64,10 @@ A one-off backfill on 2026-11-10 filled 11,429 of the 11,435 null `nba_id`
 values in `nba.injuries`; 6 rows remain (Kyle Mangas 5, Jeenathan Williams 1).
 The pre-update values are in `scratch.injuries_nba_id_backup_20261110`.
 
-## Completeness (Cockroach scratch build, 2026-11-10)
+## Completeness (Cockroach live views, 2026-11-10)
+
+Measured after the apply and the injury backfill, against the real view
+definitions.
 
 | View | Rows | Null `player_name` | Null `raw_name` |
 |---|---:|---:|---:|
@@ -135,21 +137,23 @@ change, but it doubles any row-count check on that view.
    `person_id = 0` account for 316,233 of the 337,989 base nulls. The remaining
    ~21,756 rows are mostly untracked players that util would have to load.
 
-## Ordered steps
+## Deployment record
 
-1. **Review the diff:**
-   ```bash
-   git diff -- sql/views/nba
-   ```
-2. **Rewrite the six SQL files** to the two-column form: drop every
-   `COALESCE(...)` name expression and place `raw_name` directly after
-   `player_name`. Done on this branch.
-3. **Start local Postgres and apply the six files.** `CREATE OR REPLACE`
-   cannot insert a column mid-view, and `latest_team_roster_vw.player` must be
-   renamed, so drop each view first (check for dependants with
-   `DROP VIEW ... RESTRICT`), then apply through `Database('postgres')`.
-   `scripts/apply_views.py` alone is not enough.
-4. **Verify null names and row counts** on local Postgres:
+Done on 2026-11-10:
+
+- Reviewed the diff and rewrote the six SQL files to the two-column form.
+- Applied all six to Cockroach (`cockroach-write`) with drop/recreate.
+- Ran `db.regrant_read()`; verified `kobe_public` SELECT access on all six
+  through `cockroach-read`.
+- Committed as `aee62c5` and pushed to `main` and `views-cleanup`.
+- Backfilled `nba.injuries.nba_id` (11,429 of 11,435 rows; 6 remain).
+
+Remaining:
+
+1. **Start local Postgres and apply the six files.** Drop each view first
+   (check for dependants with `DROP VIEW ... RESTRICT`), then apply through
+   `Database('postgres')`. `scripts/apply_views.py` alone is not enough.
+2. **Verify null names and row counts** on local Postgres:
    ```sql
    SELECT count(*),
           count(*) FILTER (WHERE player_name IS NULL) AS null_player_name,
@@ -159,23 +163,17 @@ change, but it doubles any row-count check on that view.
    `raw_name` should be populated on every row; `player_name` may be NULL only
    where the crosswalk is missing. Expect the local gaps to resemble the
    Cockroach findings above.
-5. **Apply the six files to Cockroach** through `cockroach-write`, using the
-   same drop/recreate sequence, then run `db.regrant_read()` so `kobe_public`
-   keeps `SELECT`.
-6. **Verify on Cockroach** with `cockroach-read`:
-   - row counts unchanged;
-   - `raw_name` populated;
-   - `player_name` NULLs match the completeness table;
-   - `kobe_public` grants present.
-7. **Watch for view type changes.** `CREATE OR REPLACE` cannot change an
-   existing column's type. If it fails, drop/recreate the view and regrant.
-   - `player_box_score_vw`, `team_roster_vw`, `injuries_vw`, and
-     `player_info_vw` use `character varying` player-name columns.
-   - `play_by_play_vw` and `latest_team_roster_vw` use `text`.
-8. **Pull the database repo on the NUC** after push. No image rebuild is needed
-   for SQL-only view changes.
-9. **Then** return to the injury `views-fetch` branch and run the view-only
+3. **Pull the database repo on the NUC.** No image rebuild is needed for
+   SQL-only view changes.
+4. **Then** return to the injury `views-fetch` branch and run the view-only
    parity build.
+
+If a view must be changed again, note that `CREATE OR REPLACE` cannot insert a
+column mid-view or change an existing column's type. Drop/recreate and regrant:
+
+- `player_box_score_vw`, `team_roster_vw`, `injuries_vw`, and
+  `player_info_vw` use `character varying` player-name columns.
+- `play_by_play_vw` and `latest_team_roster_vw` use `text`.
 
 ## Notes
 
@@ -192,3 +190,6 @@ change, but it doubles any row-count check on that view.
 - All six views are dropped and recreated, so grants must be reapplied
   (`db.regrant_read()`) and any external consumers relying on column order
   should be checked.
+- The pre-rebuild Cockroach definitions were saved to
+  `/tmp/opencode/old_nba_views_20261110.sql`; the injury-id pre-update values
+  are in `scratch.injuries_nba_id_backup_20261110`.
