@@ -5,6 +5,11 @@ roster, transaction log and how-acquired text only add movement dates. Rows are
 kept for players who did not appear in the box score that season (injured or
 bench), but they do not invent dates for them.
 
+The injury report supplies one extra piece of evidence: a player traded while
+injured may never play for the new team, so the box score has no new-team run.
+If the report shows the player on that team, that is a real stint and is added
+with the report's date range.
+
 Null dates are deliberate:
 
 * entry_date IS NULL -> already on the roster at the start of the season.
@@ -120,6 +125,30 @@ def box_runs(db: Database) -> pl.DataFrame:
                MAX(player_name) AS box_name
         FROM runs
         GROUP BY season, player_id, team_slug, team_id, run_id
+    """)
+
+
+def injury_report_stints(db: Database) -> pl.DataFrame:
+    """Player-team stints evidenced by the injury report.
+
+    A player traded while injured may never appear in the new team's box
+    score. The report is the only evidence of the new-team stint.
+    """
+    return db.read("""
+        SELECT season, team_slug, MAX(team_id) AS team_id,
+               nba_id AS player_id,
+               MAX(player_name) AS player,
+               MIN(game_date) AS first_report,
+               MAX(game_date) AS last_report
+        FROM nba.injuries_vw
+        WHERE nba_id IS NOT NULL
+          AND season IS NOT NULL
+          AND season >= '2021-22'
+        GROUP BY season, team_slug, nba_id
+        -- One-day rows are usually a scraper/team-assignment error, and a
+        -- one-day "trade" would create a false stint. Real injured-traded
+        -- stints last more than a few days.
+        HAVING MAX(game_date) - MIN(game_date) >= 3
     """)
 
 
@@ -348,6 +377,21 @@ def build_candidate(db: Database) -> pl.DataFrame:
         pl.lit(None).cast(pl.UInt32).alias("source_rows"),
     )
     cand = pl.concat([cand, no_box], how="diagonal_relaxed")
+
+    # Add stints evidenced only by the injury report. This is the traded-while-
+    # injured case: the player never appears in the new team's box score.
+    report = injury_report_stints(db)
+    seen = cand.select("season", "team_slug", "player_id").unique()
+    report = report.join(seen, on=["season", "team_slug", "player_id"], how="anti")
+    report = report.with_columns(
+        pl.col("first_report").alias("entry_date"),
+        (pl.col("last_report") + pl.duration(days=1)).alias("exit_date"),
+        pl.lit(0).cast(pl.UInt32).alias("box_games"),
+        pl.col("first_report").alias("first_game"),
+        pl.col("last_report").alias("last_game"),
+        pl.lit(None).cast(pl.UInt32).alias("source_rows"),
+    )
+    cand = pl.concat([cand, report], how="diagonal_relaxed")
     cand = normalise(cand, bounds)
 
     # A team change closes the old run and opens the new one at the next first game.
@@ -395,6 +439,18 @@ def build_candidate(db: Database) -> pl.DataFrame:
         ):
             row["exit_date"] = None
     cand = reconcile(pl.DataFrame(rows, infer_schema_length=None))
+    # A one-day report-only stint can be truncated to entry == exit by the
+    # overlap pass. Treat the exit as exclusive.
+    cand = cand.with_columns(
+        pl.when(
+            pl.col("entry_date").is_not_null()
+            & pl.col("exit_date").is_not_null()
+            & (pl.col("exit_date") <= pl.col("entry_date"))
+        )
+        .then(pl.col("entry_date") + pl.duration(days=1))
+        .otherwise(pl.col("exit_date"))
+        .alias("exit_date")
+    )
     return cand.select(COLUMNS)
 
 
@@ -405,6 +461,15 @@ def validate(db: Database, cand: pl.DataFrame) -> None:
     missing = box_keys.join(cand_keys, on=["season", "team_slug", "team_id", "player_id"], how="anti")
     if missing.height:
         raise SystemExit(f"candidate misses {missing.height} box-score stints")
+
+    report_keys = injury_report_stints(db).select("season", "team_slug", "player_id").unique()
+    missing_report = report_keys.join(
+        cand.select("season", "team_slug", "player_id").unique(),
+        on=["season", "team_slug", "player_id"],
+        how="anti",
+    )
+    if missing_report.height:
+        raise SystemExit(f"candidate misses {missing_report.height} injury-report stints")
 
     bounds = season_bounds(db)
     with_bounds = cand.join(bounds, on="season", how="left")
@@ -435,6 +500,7 @@ def validate(db: Database, cand: pl.DataFrame) -> None:
 
     print(
         f"validated: {cand.height:,} stints, {missing.height} missing box stints, "
+        f"{missing_report.height} missing report stints, "
         f"{invalid.height} invalid windows, {overlaps.height} overlaps"
     )
 

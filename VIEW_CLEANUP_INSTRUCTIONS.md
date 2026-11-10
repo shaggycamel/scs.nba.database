@@ -80,7 +80,7 @@ definitions.
 |---|---:|---:|---:|
 | `injuries_vw` | 64,269 | 6 | 0 |
 | `player_box_score_vw` | 810,633 | 615 | 0 |
-| `team_roster_vw` | 10,877 | 10 | 0 |
+| `team_roster_vw` | 10,949 | 10 | 0 |
 | `player_info_vw` | 7,248 | 3,140 | 1 |
 | `play_by_play_vw` | 8,259,647 | 675,740 | 0 |
 | `latest_team_roster_vw` | 9,658 | 7 | 0 |
@@ -159,6 +159,12 @@ Done on 2026-11-10:
 - Widened `player_box_score_vw` and `team_roster_vw` to the full schedule
   window so playoff and preseason games are covered; reapplied both to
   Cockroach and regranted.
+- Rebuilt `nba.team_roster` from box score, roster snapshots and injury-report
+  stints. The report adds the missing new-team stint for players traded while
+  injured who never played for that team (for example De'Anthony Melton,
+  2024-25: GSW exits 2024-12-16, BKN enters 2024-12-16). The table is now
+  10,949 stints with 0 missing box stints, 0 missing report stints, 0 invalid
+  windows and 0 overlaps.
 
 Remaining:
 
