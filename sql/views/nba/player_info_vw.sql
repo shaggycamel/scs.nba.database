@@ -31,9 +31,7 @@ CREATE OR REPLACE VIEW nba.player_info_vw AS
     player_info.draft_round,
     player_info.draft_number,
     player_info.greatest_75_flag,
-    COALESCE(
-        nm.conformed_name,
-        player_info.first_name || ' ' || player_info.last_name
-    ) AS player_name
+    nm.conformed_name AS player_name,
+    player_info.first_name || ' ' || player_info.last_name AS raw_name
    FROM nba.player_info
      LEFT JOIN util.player_id_map_vw nm ON player_info.player_id = nm.nba_id
