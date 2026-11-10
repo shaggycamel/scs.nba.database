@@ -13,7 +13,7 @@ Completed:
 - `get_game_schedule` now sources `ScheduleLeagueV2` (001/002/004 only,
   strict team filter, non-empty guard); 2026-27 restored to 2,532 rows /
   1,266 games on cockroach-write.
-- `nba.schedule_vw` reverted to `nba.league_game_schedule` (source column
+- `nba.league_game_schedule_vw` reverted to `nba.league_game_schedule` (source column
   dropped).
 - `nba.injuries` cleared and recollected for US dates 2026-10-20..23;
   213 rows, all with `game_id`. The Oct 23 report also wrote 16 rows for
@@ -43,7 +43,7 @@ Completed:
   2026-10-03..2026-10-16. No regular-season rows.
 - `nba.player_box_score` retains at least game 22600001 (DET-BOS); the view exposes no
   2026-27 regular-season rows because it is built on `league_game_schedule`.
-- `nba.schedule_vw` uses `statyx.schedule` for seasons > 2025-26, so the dashboard
+- `nba.league_game_schedule_vw` uses `statyx.schedule` for seasons > 2025-26, so the dashboard
   schedule looks correct. This masks the gap.
 - `ScheduleLeagueV2(league_id="00", season="2026-27")` returns 1,274 games
   (2026-10-03..2027-04-11): 67 preseason, 1,206 regular season, 1 NBA Cup. IDs are
