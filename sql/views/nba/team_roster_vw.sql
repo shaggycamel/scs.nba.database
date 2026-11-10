@@ -19,9 +19,9 @@ SELECT tr.season,
    FROM nba.team_roster tr
      LEFT JOIN util.player_id_map_vw nm ON tr.player_id = nm.nba_id::DOUBLE PRECISION
      LEFT JOIN statyx.contracts ct ON ct.player_id = nm.statyx_id::BIGINT AND ct.season = tr.season
-     LEFT JOIN ( SELECT key_dates.season,
-            key_dates.season_type,
-            key_dates.begin_date,
-            key_dates.end_date
-           FROM nba.key_dates
-          WHERE key_dates.season_type = 'Regular Season'::TEXT) kd ON tr.season = kd.season
+     LEFT JOIN ( SELECT league_game_schedule.season,
+            MIN(league_game_schedule.game_date) AS begin_date,
+            MAX(league_game_schedule.game_date) + 1 AS end_date
+           FROM nba.league_game_schedule
+          WHERE league_game_schedule.season_type = 'Regular Season'::TEXT
+          GROUP BY league_game_schedule.season) kd ON tr.season = kd.season
