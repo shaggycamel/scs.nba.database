@@ -165,6 +165,8 @@ Done on 2026-11-10:
   2024-25: GSW exits 2024-12-16, BKN enters 2024-12-16). The table is now
   10,949 stints with 0 missing box stints, 0 missing report stints, 0 invalid
   windows and 0 overlaps.
+- Added `start_position` to `player_box_score_vw` (at the end of the column
+  list) for the injury model's rotation features; reapplied and regranted.
 
 Remaining:
 
