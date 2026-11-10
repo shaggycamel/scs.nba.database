@@ -23,7 +23,7 @@ CREATE OR REPLACE VIEW nba.latest_team_roster_vw AS
            FROM ( SELECT tr.season,
                     tr.team_slug,
                     tr.team_id,
-                    nm.nba_name AS player,
+                    COALESCE(nm.conformed_name::TEXT, tr.player) AS player,
                     tr.salary,
                     tr.num,
                     tr."position",

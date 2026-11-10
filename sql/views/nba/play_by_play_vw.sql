@@ -11,7 +11,7 @@ CREATE OR REPLACE VIEW nba.play_by_play_vw AS
     pbp.team_id,
     pbp.team_tricode,
     pbp.person_id,
-    pbp.player_name,
+    COALESCE(nm.conformed_name::TEXT, pbp.player_name) AS player_name,
     pbp.player_name_i,
     pbp.action_type,
     pbp.sub_type,
@@ -28,4 +28,5 @@ CREATE OR REPLACE VIEW nba.play_by_play_vw AS
     pbp.location,
     pbp.video_available
    FROM nba.play_by_play pbp
-     LEFT JOIN nba.league_game_schedule lgs ON pbp.game_id::DOUBLE PRECISION = lgs.game_id::DOUBLE PRECISION;
+     LEFT JOIN nba.league_game_schedule lgs ON pbp.game_id::DOUBLE PRECISION = lgs.game_id::DOUBLE PRECISION
+     LEFT JOIN util.player_id_map_vw nm ON pbp.person_id::DOUBLE PRECISION = nm.nba_id::DOUBLE PRECISION;
