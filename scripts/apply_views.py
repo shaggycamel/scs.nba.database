@@ -7,9 +7,12 @@ db = Database('cockroach-write')
 
 # Every sql/views/<schema>/*.sql file, applied in one pass. CREATE OR REPLACE, so
 # re-running is safe. Globbed from __file__ so it works from any cwd; the schema
-# order is the paths' sort order (fty, nba, util).
+# order is the paths' sort order (fty, nba, util), with mod last because its
+# views read the nba view layer.
 VIEWS_DIR = Path(__file__).resolve().parent.parent / 'sql' / 'views'
-for path in sorted(VIEWS_DIR.glob('*/*.sql')):
+for path in sorted(
+    VIEWS_DIR.glob('*/*.sql'), key=lambda p: (p.parent.name == 'mod', str(p))
+):
     db.execute(path.read_text())
     print(path.name)
 
