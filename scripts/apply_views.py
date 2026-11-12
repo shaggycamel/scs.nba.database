@@ -69,7 +69,8 @@ def main() -> None:
             applied += 1
 
     if not applied:
-        raise SystemExit('no view files matched')
+        print('no view files matched; nothing to apply')
+        return
 
     # Replacing a view drops its grants. Local dev databases may not carry the
     # production read-only role.
