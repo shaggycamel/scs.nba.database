@@ -1,5 +1,8 @@
 # View Name Cleanup Instructions
 
+> Archived 2026-11-13. The retired views named here have since been deleted.
+> Current rules live in `scripts/apply_views.py` and `sql/views/`.
+
 Status: 2026-11-10. Branch: `main` (merged from `views-cleanup` at `aee62c5`).
 
 Goal: every view in the `nba` view layer exposes two adjacent name columns.
