@@ -4,12 +4,13 @@ Working notes and plan for moving the analytics database from CockroachDB Cloud
 to a single PostgreSQL instance on the Jetson. The customer-facing slice stays on
 Cockroach.
 
-Status: **provisioned, not seeded**. Postgres 17 is running on the Jetson; the
-analytics data is still only on Cockroach.
+Status: **seeded and restored, not cut over**. Postgres 17 is running on the
+Jetson with a full copy of the database; Cockroach remains the source of truth
+for customer data.
 
 ## Progress
 
-Updated 2026-11-13. Detail lives in the sections below; this is the checklist.
+Updated 2026-11-14. Detail lives in the sections below; this is the checklist.
 
 ### Done
 
@@ -26,27 +27,57 @@ Updated 2026-11-13. Detail lives in the sections below; this is the checklist.
 - [x] Recorded the backup design: Jetson dump, NUC copy, encrypted MEGA push.
 - [x] Installed Docker Compose v2 and moved the container definition into
   `deploy/jetson/compose.yaml`.
+- [x] Built `nba_seed` on the Mac from Cockroach, carrying the 78
+  `util.player_identity_review` rows and applying the `bigint` key types.
+- [x] Synced `nba`, `statyx`, `fty`, `util` and `mod`; full copies for rewritten
+  and small tables, plus missing-game top-ups for `nba.player_box_score` and
+  `nba.play_by_play`.
+- [x] Applied views, `sql/indexes/postgres.sql` and `ANALYZE`; the index pass
+  deduped `statyx.schedule` from 6,489 to 6,479.
+- [x] Dumped `nba_seed`, restored into the Jetson, reapplied all 37 views and
+  applied `util.sql_grant`.
+- [x] Fixed `nba.play_by_play_vw` to join one schedule row per game
+  (`4687aa2`).
+- [x] Added `.unique()` to `StatyxPipeline.get_schedule` in `scs_hub`
+  (`41e24f3`) and pinned it in `nba/database` (`c8ea486`).
 
 ### Left
 
-- [ ] Build `nba_seed` on the Mac from Cockroach (one-time full read), carry the
-  78 `util.player_identity_review` rows, apply views, keys and `ANALYZE`, then
-  verify counts and watermarks.
-- [ ] Dump `nba_seed`, restore into the Jetson, apply views and grants, smoke
-  test from the NUC.
-- [ ] Add `.unique()` to `StatyxPipeline.get_schedule` before ingestion points at
-  the Jetson.
+- [ ] Final delta from Cockroach to the Jetson at cutover.
+- [ ] Decide and implement the customer-data path: Cockroach remains the writer
+  for `fty.customer`, `fty.customer_league` and `util.draft_player_log`; the
+  Jetson copies are snapshots and will drift.
 - [ ] Flip selectors: `DB_CON`, `SCS_MOD_DB_SECTION`, `NBA_DB_SECTION`, draft
   build `NBA_DB_SOURCE`. Entry and draft runtime stay on Cockroach.
 - [ ] Add the registry publish step (Jetson -> Cockroach for `fty.league`,
-  `fty.league_competitor`, `fty.customer_league`).
+  `fty.league_competitor`).
 - [ ] Backups: generate the `age` key, configure the MEGA remote, write the cron
   scripts, run one restore drill, confirm the SMTP alert.
 - [ ] Cut over: pause the schedule, final delta, flip, one full cycle, unpause;
   keep Cockroach for rollback.
 - [ ] Confirm `statyx.usage_shock` and `util.update_log` need no stable row id,
   and decide on `util.deps_saved_ddl` and the legacy `pts` repo.
-- [ ] Fix Mac access to the Jetson's LAN address (Tailscale workaround in place).
+- [ ] Fix Mac access to the Jetson's LAN address (SSH works; direct Postgres
+  does not).
+
+## Seed and restore
+
+The 2026-11-14 seed is a full copy of the analytics database.
+
+- 64 base tables, 37 views, 1,675 MB.
+- `nba.player_box_score`: 596,878; `nba.play_by_play`: 4,140,161.
+- `statyx.schedule`: 6,479 after removing 10 exact duplicates; Cockroach still
+  holds 6,489 because those duplicates remain there.
+- `util.update_log`: 14,933 (Cockroach's full retained history).
+- `util.player_identity_review`: 78 rows preserved.
+- `util.sql_grant`: 40 rows; `kobe_public` can read views but not
+  `fty.customer`.
+- `ANALYZE` completed.
+
+The seed includes `fty.customer`, `fty.customer_platform`,
+`fty.customer_league` and `util.draft_player_log`. Cockroach remains
+authoritative for customer data; the Jetson copies are snapshots and will drift
+until a replication or publish path exists.
 
 ## Target shape
 
@@ -58,6 +89,10 @@ Updated 2026-11-13. Detail lives in the sections below; this is the checklist.
 | `fty.league_competitor`                         | |
 | `util.draft_player_log`                         | |
 | their four `_vw` views (`customer_vw`, `customer_league_vw`, `league_vw`, `league_competitor_vw`) | |
+
+The 2026-11-14 seed is a full copy, so the customer tables and views are also
+present on the Jetson. They are not authoritative; Cockroach remains the writer
+for `fty.customer`, `fty.customer_league` and `util.draft_player_log`.
 
 `util.update_log` and `util.update_schedule` move with analytics. That keeps
 `nba/database` on a single connection (`hub.db`) and makes the NUC the only
@@ -325,25 +360,22 @@ Run the check from the NUC: if the Jetson is down, the check still fires.
   irreplaceable parts are `util.update_log`, the `mod.*` outputs and the
   identity-review history.
 - RTO about an hour: restore ~1.5 GB, apply views and keys, grant.
-- `fty.customer` and `util.draft_player_log` stay on Cockroach and remain covered
-  by its managed backups, so they are not in these dumps.
+- Cockroach remains authoritative for `fty.customer`, `fty.customer_league` and
+  `util.draft_player_log` and covers them with its managed backups. The Jetson
+  seed also contains them because the 2026-11-14 copy was full.
 
 ## Open items
 
 - **Fix Mac access to the Jetson's LAN address.** From the Mac,
-  `192.168.68.109:5432` accepts `nc` but gives `EHOSTUNREACH` to `curl`,
-  `openssl s_client`, `psql` and Python; SSH and ping work, and the NUC is
-  unaffected. Toggling Local Network permission did not help. Next tests:
-  reboot the Mac, then `tailscale down` and retry — the Tailscale network
-  extension is the only one installed. Workaround already in place: the Mac's
-  `jetson-read`/`jetson-write` sections use the `jetson` alias.
-- **Paired change required in `scs_hub`.** Cockroach carries the same 10
-  duplicate `statyx.schedule` rows as the Mac. `StatyxPipeline.get_schedule`
-  (`src/scs_hub/statyx.py:63`) replaces the season and writes the API frame
-  unchanged, and its own comment notes the source repeats game ids. With the new
-  primary key, the next rewrite will fail unless that function dedupes the frame
-  (`.unique()`) before `write_ordered`. Land that change before pointing
-  ingestion at the Jetson.
+  `192.168.68.109:5432` accepts `nc` but psycopg2 gets "No route to host";
+  SSH works over the LAN (`ssh jetson` resolves to 192.168.68.109), and
+  `docker exec scs-nba-pg psql` works. The `jetson` alias also stopped resolving
+  from the Mac during the 2026-11-14 restore, so direct `[jetson-read]` /
+  `[jetson-write]` connections are unavailable there. The NUC is unaffected.
+  Workaround: SSH + `docker exec` for admin.
+- **Customer data authority.** Cockroach remains the writer for
+  `fty.customer`, `fty.customer_league` and `util.draft_player_log`. The Jetson
+  copies are snapshots; keep them read-only or add a sync path before cutover.
 - `statyx.usage_shock` and `util.update_log` are intentionally unkeyed; confirm
   no consumer needs a stable row id.
 - `nba/mod/pts` is legacy and unmaintained; do not carry `anl.*` or its
