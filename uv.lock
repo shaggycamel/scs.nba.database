@@ -1488,7 +1488,7 @@ wheels = [
 [[package]]
 name = "scs-hub"
 version = "0.1.0"
-source = { git = "https://github.com/shaggycamel/scs.scs_hub.git#402b34484c1e48bac4a70dcb7f77b30be37cd310" }
+source = { git = "https://github.com/shaggycamel/scs.scs_hub.git#f5089788d39744848187b5bdd0aecc0cd79f34bf" }
 dependencies = [
     { name = "aiohttp" },
     { name = "espn-api" },
