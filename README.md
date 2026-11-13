@@ -96,13 +96,18 @@ rather than shifting with NZ DST:
 # daily, 13:00 UTC (02:00 NZDT)
 0 13 * * *      /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
-# intraday, 3x/day: 07,16,22 UTC (20:00, 05:00, 11:00 NZDT)
+# intraday, 07,16,22 UTC (20:00, 05:00, 11:00 NZDT)
 0 7,16,22 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
+# late intraday, 03:45 UTC (16:45 NZDT): the final lineup snapshot for the ET
+# game day, after the last game has started and before midnight ET.
+45 3 * * *      /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+
 # league dash: daily 16:30 UTC (05:30 NZDT) regenerates the shared NBA base;
-# intraday 3x/day: 03:30,08:30,22:30 UTC (16:30, 21:30, 11:30 NZDT)
+# intraday 3x/day: 04:05,08:30,22:30 UTC (17:05, 21:30, 11:30 NZDT). The
+# 04:05 run follows the database's 03:45 final-lineup snapshot.
 30 16 * * *     PROVISION=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
-30 3,8,22 * * * PROVISION=1 SKIP_BASE=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
+5 4,8,22 * * *  PROVISION=1 SKIP_BASE=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
 ```
 
 No environment setup needed — `cron.sh` reads `~/.config/scs_hub_credentials.ini` (or
