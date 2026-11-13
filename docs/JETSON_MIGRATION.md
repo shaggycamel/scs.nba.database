@@ -122,9 +122,8 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
   not down).
 - **Hosting:** `docker run` from `deploy/jetson/run.sh`, pinned to
   `postgres:17`, `restart: unless-stopped`, container `scs-nba-pg`, data in
-  `/srv/scs-nba-pg`. The Jetson also has `docker-compose-v2`
-  (`sudo apt-get install docker-compose-v2`); the script stays the source of
-  truth until a compose file replaces it.
+  `/srv/scs-nba-pg`. Docker Compose v2.40.3 is installed, but `run.sh` stays the
+  source of truth until a compose file replaces it.
 - **Network:** published on `127.0.0.1:5432`, `192.168.68.109:5432` and
   `100.76.153.9:5432` (Tailscale) only. No public port; HF has no route by
   design. The NUC uses the LAN address, the Mac uses Tailscale.
@@ -152,6 +151,7 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
   `100.76.153.9`.
 - Verified from the NUC (`scs`), the Jetson (`scs` via `127.0.0.1`) and the Mac
   (`scs` and `kobe_public` via Tailscale).
+- Docker Compose v2.40.3 installed (`docker compose version`).
 - `~/scs-nba-pg/.env` holds `POSTGRES_PASSWORD` (mode 600).
   `deploy/jetson/run.sh` reads it and replaces the container without touching
   `/srv/scs-nba-pg`.
