@@ -129,7 +129,8 @@ CREATE OR REPLACE VIEW nba.player_box_score_vw AS
             ELSE 1
         END AS ej,
     tm.team_id,
-    pbs.start_position
+    pbs.start_position,
+    pbs.fg3_a
    FROM nba.league_game_schedule lgs
      LEFT JOIN ( SELECT tr_inr.season,
             tr_inr.team_slug,
