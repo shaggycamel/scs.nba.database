@@ -29,5 +29,10 @@ CREATE OR REPLACE VIEW nba.play_by_play_vw AS
     pbp.location,
     pbp.video_available
    FROM nba.play_by_play pbp
-     LEFT JOIN nba.league_game_schedule lgs ON pbp.game_id::DOUBLE PRECISION = lgs.game_id::DOUBLE PRECISION
+     LEFT JOIN ( SELECT g.game_id,
+            max(g.season) AS season,
+            max(g.season_type) AS season_type,
+            max(g.game_date) AS game_date
+           FROM nba.league_game_schedule g
+          GROUP BY g.game_id) lgs ON pbp.game_id::DOUBLE PRECISION = lgs.game_id::DOUBLE PRECISION
      LEFT JOIN util.player_id_map_vw nm ON pbp.person_id::DOUBLE PRECISION = nm.nba_id::DOUBLE PRECISION;
