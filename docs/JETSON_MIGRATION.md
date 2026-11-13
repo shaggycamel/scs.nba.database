@@ -101,9 +101,11 @@ customer password hashes.
 
 **`util.player_identity_review`: 78 rows on the Mac, 0 on Cockroach.**
 
-This is the only table where the Mac is ahead. Do not treat Cockroach as the
-source of truth for it, and do not let a seed drop it. Push those rows to
-Cockroach; they are the only copy.
+All 78 rows are `status = 'applied'` (5–6 October 2026), so this is an audit log
+of corrections already reflected in `util.player` and `util.player_source_id` —
+not state. Cockroach does not need it. Carry the rows in the Jetson seed so the
+history survives; the reviewer writes to whichever database `[runtime]` points
+at, so the Jetson is their new home.
 
 Other local-only drift, do not propagate:
 
@@ -137,8 +139,9 @@ Two options. Chosen: rebuild into a fresh database, not patch in place.
 1. `createdb nba_seed`; leave `nba` untouched as rollback.
 2. Copy every base table from Cockroach (`nba`, `statyx`, `fty`, `util`, `mod`);
    exclude `anl` and `scratch`. Cockroach is the source, so no skip list applies.
-3. Copy the 78 `util.player_identity_review` rows **Mac -> Cockroach first**;
-   otherwise the rebuild loses them.
+3. Carry `util.player_identity_review` in the Jetson seed. It is an applied
+   audit log, not state; Cockroach does not need it, and rebuilding the Mac from
+   Cockroach will drop it.
 4. Apply views from the repo: `apply_views.py --db-con postgres-seed`. It already
    guards on `kobe_public` not existing locally.
 5. Apply `sql/indexes/postgres.sql`. It first drops whatever keys the dump
