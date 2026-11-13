@@ -25,9 +25,11 @@ docker run -d --name "$NAME" \
     -e POSTGRES_DB=nba_restore_test \
     postgres:17 >/dev/null
 
+# pg_isready can succeed against the entrypoint's temporary server before
+# POSTGRES_DB exists, so wait for the database itself.
 ready=0
-for _ in $(seq 1 60); do
-    if docker exec "$NAME" pg_isready -U postgres -d nba_restore_test >/dev/null 2>&1; then
+for _ in $(seq 1 120); do
+    if docker exec "$NAME" psql -U postgres -d nba_restore_test -tAc 'select 1' >/dev/null 2>&1; then
         ready=1
         break
     fi
