@@ -4,7 +4,49 @@ Working notes and plan for moving the analytics database from CockroachDB Cloud
 to a single PostgreSQL instance on the Jetson. The customer-facing slice stays on
 Cockroach.
 
-Status: **planning**. No production cutover has happened.
+Status: **provisioned, not seeded**. Postgres 17 is running on the Jetson; the
+analytics data is still only on Cockroach.
+
+## Progress
+
+Updated 2026-11-13. Detail lives in the sections below; this is the checklist.
+
+### Done
+
+- [x] Compared the Mac copy with Cockroach: objects, columns, indexes, counts,
+  watermarks, and the 2026-11-02..12 delta.
+- [x] Designed primary keys and indexes fresh; validated on a scratch database,
+  including the inherited-key reset and the `statyx.schedule` dedupe.
+- [x] Dropped the stray `nba.schedule_vw` from the Mac.
+- [x] Provisioned PostgreSQL 17 on the Jetson: container `scs-nba-pg`, Compose,
+  data in `/srv/scs-nba-pg`, UTC, loopback/LAN/Tailscale binds.
+- [x] Created `scs` and `kobe_public`; revoked `PUBLIC` connect.
+- [x] Added `[jetson-write]` / `[jetson-read]` on Mac, NUC and Jetson; verified
+  from all three. The Mac uses the `jetson` alias (MagicDNS).
+- [x] Recorded the backup design: Jetson dump, NUC copy, encrypted MEGA push.
+- [x] Installed Docker Compose v2 and moved the container definition into
+  `deploy/jetson/compose.yaml`.
+
+### Left
+
+- [ ] Build `nba_seed` on the Mac from Cockroach (one-time full read), carry the
+  78 `util.player_identity_review` rows, apply views, keys and `ANALYZE`, then
+  verify counts and watermarks.
+- [ ] Dump `nba_seed`, restore into the Jetson, apply views and grants, smoke
+  test from the NUC.
+- [ ] Add `.unique()` to `StatyxPipeline.get_schedule` before ingestion points at
+  the Jetson.
+- [ ] Flip selectors: `DB_CON`, `SCS_MOD_DB_SECTION`, `NBA_DB_SECTION`, draft
+  build `NBA_DB_SOURCE`. Entry and draft runtime stay on Cockroach.
+- [ ] Add the registry publish step (Jetson -> Cockroach for `fty.league`,
+  `fty.league_competitor`, `fty.customer_league`).
+- [ ] Backups: generate the `age` key, configure the MEGA remote, write the cron
+  scripts, run one restore drill, confirm the SMTP alert.
+- [ ] Cut over: pause the schedule, final delta, flip, one full cycle, unpause;
+  keep Cockroach for rollback.
+- [ ] Confirm `statyx.usage_shock` and `util.update_log` need no stable row id,
+  and decide on `util.deps_saved_ddl` and the legacy `pts` repo.
+- [ ] Fix Mac access to the Jetson's LAN address (Tailscale workaround in place).
 
 ## Target shape
 
