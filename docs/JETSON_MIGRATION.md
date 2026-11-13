@@ -40,6 +40,8 @@ Updated 2026-11-14. Detail lives in the sections below; this is the checklist.
   (`4687aa2`).
 - [x] Added `.unique()` to `StatyxPipeline.get_schedule` in `scs_hub`
   (`41e24f3`) and pinned it in `nba/database` (`c8ea486`).
+- [x] Backups: Jetson nightly dump, NUC copy + age encryption, MEGA upload,
+  freshness alert and restore drill verified; cron installed on both hosts.
 
 ### Left
 
@@ -51,8 +53,6 @@ Updated 2026-11-14. Detail lives in the sections below; this is the checklist.
   build `NBA_DB_SOURCE`. Entry and draft runtime stay on Cockroach.
 - [ ] Add the registry publish step (Jetson -> Cockroach for `fty.league`,
   `fty.league_competitor`).
-- [ ] Backups: generate the `age` key, configure the MEGA remote, write the cron
-  scripts, run one restore drill, confirm the SMTP alert.
 - [ ] Cut over: pause the schedule, final delta, flip, one full cycle, unpause;
   keep Cockroach for rollback.
 - [ ] Confirm `statyx.usage_shock` and `util.update_log` need no stable row id,
@@ -292,6 +292,11 @@ Three copies in three failure domains.
 | NUC | `/srv/nba-backups` | nightly rsync | 14 daily + 8 weekly | Jetson disk failure |
 | MEGA | `nba-backups/` | daily | 30 daily + 12 monthly | site loss (fire, theft) |
 
+Implemented in [`deploy/backups/`](../deploy/backups/README.md). The first dump,
+NUC copy, encrypted MEGA upload and a full restore drill passed on 2026-11-14;
+cron is installed on both hosts. The NUC uses the official rclone binary in
+`~/.local/bin` because Ubuntu's package omits the MEGA backend.
+
 ### Jetson
 
 Run the dump from inside the container so the binary matches the server:
@@ -311,7 +316,8 @@ outage cannot also stop the off-site copy.
 
 ### MEGA
 
-- `rclone` remote `mega:`, directory `nba-backups/`.
+- `rclone` remote `mega:`, directories `nba-backups/daily/` and
+  `nba-backups/monthly/`.
 - The account has 750 GB, so retention is storage-cheap: 30 daily plus 12
   monthly is roughly 17 GB at ~400 MB a dump.
 - Encrypt before upload, since a dump is a complete copy of the database:
@@ -336,9 +342,10 @@ outage cannot also stop the off-site copy.
 
 ### Restore drill
 
-Monthly, on the NUC:
+`deploy/backups/restore_drill.sh` runs the drill automatically with a throwaway
+PostgreSQL 17 container. The manual equivalent, on the NUC, is:
 
-1. `rclone copy mega:nba-backups/nba-YYYY-MM-DD.dump.age .`
+1. `rclone copy mega:nba-backups/daily/nba-YYYY-MM-DD.dump.age .`
 2. `age -d -i ~/.config/scs_backup_age.key < ...age > ...dump`
 3. `createdb nba_restore_test`
 4. `pg_restore -d nba_restore_test --no-owner --no-privileges ...dump`
@@ -349,10 +356,10 @@ A backup that has never been restored is a hypothesis.
 
 ### Monitoring
 
-Alert through the existing failure-email path in `__main__.py` (`[smtp]`:
-`SMTP_USER`, `SMTP_PASSWORD`, `ALERT_TO`) when the newest dump on the NUC is
+`deploy/backups/check_backups.py` reads `[smtp]` (`SMTP_USER`,
+`SMTP_PASSWORD`, `ALERT_TO`) and alerts when the newest dump on the NUC is
 older than 36 hours, or the newest MEGA object is older than the chosen cadence.
-Run the check from the NUC: if the Jetson is down, the check still fires.
+It runs from the NUC: if the Jetson is down, the check still fires.
 
 ### RPO / RTO
 

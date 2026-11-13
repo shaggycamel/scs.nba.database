@@ -47,10 +47,10 @@ chmod 600 ~/.config/scs_backup_age.key
 age-keygen -y ~/.config/scs_backup_age.key > ~/.config/scs_backup_age.pub
 ```
 
-Configure the MEGA remote once:
+Configure the MEGA remote once with the official binary:
 
 ```bash
-rclone config
+~/.local/bin/rclone config
 # remote name: mega, storage: mega
 ```
 
@@ -75,7 +75,7 @@ DRY_RUN=1 ~/shaggy_camel_sports/nba/database/deploy/backups/nuc_backup.sh
 Then run one real upload and verify it appears:
 
 ```bash
-rclone lsf mega:nba-backups/daily/
+~/.local/bin/rclone lsf mega:nba-backups/daily/
 ```
 
 ## Cron
