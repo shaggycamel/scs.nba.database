@@ -17,6 +17,7 @@ CREATE OR REPLACE VIEW nba.player_box_score_vw AS
     pbs.min,
     pbs.pts,
     pbs.fg3_m,
+    pbs.fg3_a,
     pbs.fgm,
     pbs.fga,
     pbs.ftm,
@@ -129,8 +130,7 @@ CREATE OR REPLACE VIEW nba.player_box_score_vw AS
             ELSE 1
         END AS ej,
     tm.team_id,
-    pbs.start_position,
-    pbs.fg3_a
+    pbs.start_position
    FROM nba.league_game_schedule lgs
      LEFT JOIN ( SELECT tr_inr.season,
             tr_inr.team_slug,
