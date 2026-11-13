@@ -121,12 +121,13 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
 - **Engine/version:** PostgreSQL 17 (Mac is 15.1; dump/restore works upward,
   not down).
 - **Hosting:** `docker run` from `deploy/jetson/run.sh`, pinned to
-  `postgres:17`, `restart: unless-stopped`, container `nba-pg`, data in
-  `/srv/nba-pg`. The Jetson has no Compose v2 plugin, and one container does not
-  justify installing it.
-- **Network:** published on `127.0.0.1:5432` and `192.168.68.109:5432` only. No
-  public port, no Tailscale bind; HF has no route by design. Add a Tailscale
-  binding only if remote DB access is needed, and prefer an SSH tunnel.
+  `postgres:17`, `restart: unless-stopped`, container `scs-nba-pg`, data in
+  `/srv/scs-nba-pg`. The Jetson also has `docker-compose-v2`
+  (`sudo apt-get install docker-compose-v2`); the script stays the source of
+  truth until a compose file replaces it.
+- **Network:** published on `127.0.0.1:5432`, `192.168.68.109:5432` and
+  `100.76.153.9:5432` (Tailscale) only. No public port; HF has no route by
+  design. The NUC uses the LAN address, the Mac uses Tailscale.
 - **Roles:** `scs` (owner/writer, superuser inside the container) and
   `kobe_public` (`LOGIN`, `NOSUPERUSER`, `default_transaction_read_only=on`,
   `CONNECT` only). Column-level access to views comes from `util.sql_grant`
@@ -143,19 +144,22 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
 
 ### Provisioned 2026-11-13
 
-- `postgres:17` running as `nba-pg` on the Jetson, healthy, UTC, 7.5 MB empty
-  `nba` database.
+- `postgres:17` running as `scs-nba-pg` on the Jetson, healthy, UTC, 7.5 MB
+  empty `nba` database, data in `/srv/scs-nba-pg`.
 - `scs` and `kobe_public` created; `PUBLIC` connect revoked on the database.
-- `[jetson-write]` / `[jetson-read]` added on Mac, NUC and Jetson.
-- Verified from the NUC (`scs`) and from the Jetson (`scs` via `127.0.0.1`).
-- `~/nba-pg/.env` holds `POSTGRES_PASSWORD` (mode 600). `deploy/jetson/run.sh`
-  reads it and replaces the container without touching `/srv/nba-pg`.
+- `[jetson-write]` / `[jetson-read]` added on Mac, NUC and Jetson. The Jetson's
+  copy points at `127.0.0.1`; the NUC uses `192.168.68.109`; the Mac uses
+  `100.76.153.9`.
+- Verified from the NUC (`scs`), the Jetson (`scs` via `127.0.0.1`) and the Mac
+  (`scs` and `kobe_public` via Tailscale).
+- `~/scs-nba-pg/.env` holds `POSTGRES_PASSWORD` (mode 600).
+  `deploy/jetson/run.sh` reads it and replaces the container without touching
+  `/srv/scs-nba-pg`.
 
-Known issue: Python and `psql` on the Mac get `EHOSTUNREACH` for
-`192.168.68.109:5432` while `nc` and SSH work. That is macOS Local Network
-permission, not Postgres. Grant the terminal app local-network access in System
-Settings → Privacy & Security. The NUC is the production client, so this blocks
-only Mac-side development.
+Known issue: from the Mac, Python, `psql` and `curl` get `EHOSTUNREACH` for
+`192.168.68.109:5432`, while `nc` and SSH work. That is macOS Local Network
+permission, not Postgres, which is why the Mac uses the Tailscale address. The
+NUC is the production client and uses the LAN address without trouble.
 
 ## Making the Mac congruent
 
@@ -215,7 +219,7 @@ Three copies in three failure domains.
 Run the dump from inside the container so the binary matches the server:
 
 ```bash
-docker exec nba-pg pg_dump -U scs -Fc -Z6 nba > /srv/backups/nba-$(date -u +%F).dump
+docker exec scs-nba-pg pg_dump -U scs -Fc -Z6 nba > /srv/backups/nba-$(date -u +%F).dump
 ```
 
 `pg_dump` takes a consistent snapshot, so writes can continue. Keep 7 days —
@@ -247,6 +251,10 @@ outage cannot also stop the off-site copy.
   enabled, rclone needs the code once at setup, then stores a session.
 - MEGA has a monthly transfer quota and no object lock. Uploads are ~400 MB a
   week; restores count against the same quota, so keep the account recoverable.
+- MEGA's own CLI, [MegaCMD](https://mega.io/cmd), is a supported alternative to
+  rclone: `mega-login` once, then `mega-put`, `mega-get` and `mega-rm` for
+  upload, download and delete. Use it if the rclone MEGA backend gives trouble;
+  rclone stays the default because dated retention is easier to script.
 
 ### Restore drill
 
