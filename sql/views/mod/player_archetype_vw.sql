@@ -1,3 +1,42 @@
--- Public read-only view over the private model table.
+-- Public read-only view over the private model table. player_name is the
+-- conformed name from util.player_id_map_vw; raw_name is the model's stored name.
 CREATE OR REPLACE VIEW mod.player_archetype_vw AS
-SELECT * FROM mod.player_archetype_base;
+SELECT
+    b.game_id,
+    b.player_id,
+    nm.conformed_name AS player_name,
+    b.player_name AS raw_name,
+    b.game_date,
+    b.season,
+    b.team_abbreviation,
+    b.prior_games,
+    b.archetype_label,
+    b.archetype_confidence,
+    b.archetype_entropy,
+    b.archetype_0,
+    b.archetype_1,
+    b.archetype_2,
+    b.archetype_3,
+    b.archetype_4,
+    b.archetype_5,
+    b.archetype_6,
+    b.archetype_7,
+    b.archetype_8,
+    b.archetype_9,
+    b.r_ast_pct,
+    b.r_ast_per_min,
+    b.r_ast_ratio,
+    b.r_blk_per_min,
+    b.r_dreb_pct,
+    b.r_fg3a_share,
+    b.r_fga_per_min,
+    b.r_ftr,
+    b.r_min,
+    b.r_oreb_pct,
+    b.r_pf_per_min,
+    b.r_start_rate,
+    b.r_stl_per_min,
+    b.r_tov_pct,
+    b.model_cutoff
+FROM mod.player_archetype_base b
+LEFT JOIN util.player_id_map_vw nm ON nm.nba_id = b.player_id;

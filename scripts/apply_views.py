@@ -72,11 +72,11 @@ def main() -> None:
         print('no view files matched; nothing to apply')
         return
 
-    # Replacing a view drops its grants. Local dev databases may not carry the
-    # production read-only role.
+    # Applying views replaces them, which drops their grants. Local dev
+    # databases may not carry the production read-only role.
     if has_role(db):
-        db.regrant_read()
-        print(f'applied {applied} view(s) and regranted read access')
+        db.apply_sql_grant()
+        print(f'applied {applied} view(s) and applied util.sql_grant')
     else:
         print(f'applied {applied} view(s); kobe_public absent, grants skipped')
 
