@@ -184,7 +184,7 @@ Three copies in three failure domains.
 | --- | --- | --- | --- | --- |
 | Jetson | `/srv/backups` | nightly | 7 | bad migration, accidental delete |
 | NUC | `/srv/nba-backups` | nightly rsync | 14 daily + 8 weekly | Jetson disk failure |
-| MEGA | `nba-backups/` | daily | 30 | site loss (fire, theft) |
+| MEGA | `nba-backups/` | daily | 30 daily + 12 monthly | site loss (fire, theft) |
 
 ### Jetson
 
@@ -206,6 +206,8 @@ outage cannot also stop the off-site copy.
 ### MEGA
 
 - `rclone` remote `mega:`, directory `nba-backups/`.
+- The account has 750 GB, so retention is storage-cheap: 30 daily plus 12
+  monthly is roughly 17 GB at ~400 MB a dump.
 - Encrypt before upload, since a dump is a complete copy of the database:
 
   ```bash
@@ -237,7 +239,8 @@ A backup that has never been restored is a hypothesis.
 
 ### Monitoring
 
-Alert through the existing `[smtp]` section when the newest dump on the NUC is
+Alert through the existing failure-email path in `__main__.py` (`[smtp]`:
+`SMTP_USER`, `SMTP_PASSWORD`, `ALERT_TO`) when the newest dump on the NUC is
 older than 36 hours, or the newest MEGA object is older than the chosen cadence.
 Run the check from the NUC: if the Jetson is down, the check still fires.
 
