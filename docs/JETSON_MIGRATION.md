@@ -127,8 +127,9 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
 - **Roles:** owner/writer for the NUC and model runner; `kobe_public` with
   `SELECT` on views for read clients. Apply `util.sql_grant` after views.
 - **Time:** server and session `UTC`.
-- **Backups:** nightly `pg_dump -Fc` on the Jetson, copied to the NUC, 14 daily
-  + 8 weekly, monthly restore drill.
+- **Backups:** nightly `pg_dump -Fc` on the Jetson, copied to the NUC, then
+  encrypted and pushed to the existing MEGA account with `rclone`. Details in
+  [Backups](#backups).
 - **Storage:** eMMC, ~27 GB free. Data is ~1.5 GB; budget ~3 GB with bloat and
   tune autovacuum for the delete-then-append write pattern.
 
@@ -174,6 +175,80 @@ Cockroach or apply `sql/tables/util.sql_grant.sql`.
    entry sees the current registry.
 
 Keep the Cockroach analytics tables for a rollback window before dropping them.
+
+## Backups
+
+Three copies in three failure domains.
+
+| Layer | Where | Frequency | Retention | Protects against |
+| --- | --- | --- | --- | --- |
+| Jetson | `/srv/backups` | nightly | 7 | bad migration, accidental delete |
+| NUC | `/srv/nba-backups` | nightly rsync | 14 daily + 8 weekly | Jetson disk failure |
+| MEGA | `nba-backups/` | daily | 30 | site loss (fire, theft) |
+
+### Jetson
+
+Run the dump from inside the container so the binary matches the server:
+
+```bash
+docker exec nba-pg pg_dump -U scs -Fc -Z6 nba > /srv/backups/nba-$(date -u +%F).dump
+```
+
+`pg_dump` takes a consistent snapshot, so writes can continue. Keep 7 days —
+this is the same disk, so it is for fast restores, not disaster recovery.
+
+### NUC
+
+`rsync` the newest dump after the Jetson run, keep 14 daily and 8 weekly, then
+push to MEGA from here. The NUC uploads rather than the Jetson so a Jetson
+outage cannot also stop the off-site copy.
+
+### MEGA
+
+- `rclone` remote `mega:`, directory `nba-backups/`.
+- Encrypt before upload, since a dump is a complete copy of the database:
+
+  ```bash
+  age -r "$(cat ~/.config/scs_backup_age.pub)" \
+      -o nba-$(date -u +%F).dump.age /srv/nba-backups/nba-$(date -u +%F).dump
+  ```
+
+- Dated filenames are the only versioning MEGA provides. Never prune to one
+  copy, and do not enable a retention rule that could delete the newest file.
+- Private key at `~/.config/scs_backup_age.key` (mode 600), with a copy in the
+  password manager. Losing it loses every backup.
+- `rclone` config at `~/.config/rclone/rclone.conf` (mode 600). If MEGA has 2FA
+  enabled, rclone needs the code once at setup, then stores a session.
+- MEGA has a monthly transfer quota and no object lock. Uploads are ~400 MB a
+  week; restores count against the same quota, so keep the account recoverable.
+
+### Restore drill
+
+Monthly, on the NUC:
+
+1. `rclone copy mega:nba-backups/nba-YYYY-MM-DD.dump.age .`
+2. `age -d -i ~/.config/scs_backup_age.key < ...age > ...dump`
+3. `createdb nba_restore_test`
+4. `pg_restore -d nba_restore_test --no-owner --no-privileges ...dump`
+5. Count checks against `nba.player_box_score`, `util.update_log` and `mod.*`,
+   then `dropdb nba_restore_test`.
+
+A backup that has never been restored is a hypothesis.
+
+### Monitoring
+
+Alert through the existing `[smtp]` section when the newest dump on the NUC is
+older than 36 hours, or the newest MEGA object is older than the chosen cadence.
+Run the check from the NUC: if the Jetson is down, the check still fires.
+
+### RPO / RTO
+
+- RPO 24 hours. Most tables rebuild from the NBA/Statyx/ESPN APIs; the
+  irreplaceable parts are `util.update_log`, the `mod.*` outputs and the
+  identity-review history.
+- RTO about an hour: restore ~1.5 GB, apply views and keys, grant.
+- `fty.customer` and `util.draft_player_log` stay on Cockroach and remain covered
+  by its managed backups, so they are not in these dumps.
 
 ## Open items
 
