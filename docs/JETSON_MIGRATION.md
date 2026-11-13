@@ -120,10 +120,10 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
 
 - **Engine/version:** PostgreSQL 17 (Mac is 15.1; dump/restore works upward,
   not down).
-- **Hosting:** `docker run` from `deploy/jetson/run.sh`, pinned to
+- **Hosting:** `docker compose` from `deploy/jetson/compose.yaml`, pinned to
   `postgres:17`, `restart: unless-stopped`, container `scs-nba-pg`, data in
-  `/srv/scs-nba-pg`. Docker Compose v2.40.3 is installed, but `run.sh` stays the
-  source of truth until a compose file replaces it.
+  `/srv/scs-nba-pg`. `deploy/jetson/run.sh` is a thin wrapper around
+  `docker compose up -d`.
 - **Network:** published on `127.0.0.1:5432`, `192.168.68.109:5432` and
   `100.76.153.9:5432` (Tailscale) only. No public port; HF has no route by
   design. The NUC uses the LAN address; the Mac uses the `jetson` alias,
@@ -152,10 +152,10 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
   `jetson` (MagicDNS).
 - Verified from the NUC (`scs`), the Jetson (`scs` via `127.0.0.1`) and the Mac
   (`scs` and `kobe_public` via the `jetson` alias).
-- Docker Compose v2.40.3 installed (`docker compose version`).
-- `~/scs-nba-pg/.env` holds `POSTGRES_PASSWORD` (mode 600).
-  `deploy/jetson/run.sh` reads it and replaces the container without touching
-  `/srv/scs-nba-pg`.
+- Docker Compose v2.40.3 installed; the container is managed by
+  `deploy/jetson/compose.yaml`.
+- `~/scs-nba-pg/.env` holds `POSTGRES_PASSWORD` (mode 600); Compose reads it.
+  Replacing the container leaves `/srv/scs-nba-pg` untouched.
 
 Known issue: from the Mac, Python, `psql` and `curl` get `EHOSTUNREACH` for
 `192.168.68.109:5432`, while `nc` and SSH work. That is macOS Local Network

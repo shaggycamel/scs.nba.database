@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: scs-nba-pg
+    restart: unless-stopped
+    shm_size: 1gb
+    ports:
+      - "127.0.0.1:5432:5432"
+      - "192.168.68.109:5432:5432"
+      - "100.76.153.9:5432:5432"
+    environment:
+      POSTGRES_DB: nba
+      POSTGRES_USER: scs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      TZ: UTC
+      PGTZ: UTC
+    command:
+      - postgres
+      - -c
+      - shared_buffers=4GB
+      - -c
+      - effective_cache_size=12GB
+      - -c
+      - work_mem=64MB
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - max_connections=50
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - timezone=UTC
+      - -c
+      - log_timezone=UTC
+      - -c
+      - autovacuum_vacuum_scale_factor=0.05
+      - -c
+      - autovacuum_analyze_scale_factor=0.02
+    volumes:
+      - /srv/scs-nba-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scs -d nba"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
