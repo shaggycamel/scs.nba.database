@@ -287,6 +287,13 @@ Run the check from the NUC: if the Jetson is down, the check still fires.
 
 ## Open items
 
+- **Fix Mac access to the Jetson's LAN address.** From the Mac,
+  `192.168.68.109:5432` accepts `nc` but gives `EHOSTUNREACH` to `curl`,
+  `openssl s_client`, `psql` and Python; SSH and ping work, and the NUC is
+  unaffected. Toggling Local Network permission did not help. Next tests:
+  reboot the Mac, then `tailscale down` and retry — the Tailscale network
+  extension is the only one installed. Workaround already in place: the Mac's
+  `jetson-read`/`jetson-write` sections use `100.76.153.9`.
 - **Paired change required in `scs_hub`.** Cockroach carries the same 10
   duplicate `statyx.schedule` rows as the Mac. `StatyxPipeline.get_schedule`
   (`src/scs_hub/statyx.py:63`) replaces the season and writes the API frame
