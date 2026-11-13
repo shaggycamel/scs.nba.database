@@ -5,6 +5,7 @@
 # made, before any rclone call. The unencrypted dump is kept locally for fast
 # restores; MEGA only ever receives the .age file.
 set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
 
 JETSON_HOST="${JETSON_HOST:-jetson}"
 REMOTE_DIR="${REMOTE_DIR:-/srv/backups}"

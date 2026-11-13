@@ -9,8 +9,15 @@ drill. Design and retention targets are in
 NUC:
 
 ```bash
-sudo apt-get install -y age rclone
+sudo apt-get install -y age
 sudo install -d -m 700 -o oli -g oli /srv/nba-backups /srv/nba-backups/daily /srv/nba-backups/weekly
+
+# Ubuntu's rclone package omits the MEGA backend; use the official binary.
+mkdir -p ~/.local/bin
+curl -L https://downloads.rclone.org/rclone-current-linux-amd64.zip -o /tmp/rclone.zip
+unzip -o /tmp/rclone.zip -d /tmp/rclone
+install -m 755 /tmp/rclone/rclone-*-linux-amd64/rclone ~/.local/bin/rclone
+rm -f /tmp/rclone.zip
 ```
 
 Jetson (no host PostgreSQL client or age/rclone needed):

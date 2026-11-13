@@ -20,6 +20,7 @@ from pathlib import Path
 MAX_AGE_HOURS = int(os.environ.get('MAX_AGE_HOURS', '36'))
 LOCAL_DIR = Path(os.environ.get('LOCAL_DIR', '/srv/nba-backups/daily'))
 RCLONE_REMOTE = os.environ.get('RCLONE_REMOTE', 'mega:nba-backups')
+RCLONE = Path.home() / '.local' / 'bin' / 'rclone'
 INI_PATH = Path(
     os.environ.get('SCS_HUB_CREDENTIALS', Path.home() / '.config' / 'scs_hub_credentials.ini')
 )
@@ -56,7 +57,7 @@ def newest_local() -> datetime | None:
 
 
 def newest_remote() -> datetime | None:
-    rclone = shutil.which('rclone')
+    rclone = str(RCLONE) if RCLONE.is_file() else shutil.which('rclone')
     if rclone is None:
         raise RuntimeError('rclone is not installed')
     result = subprocess.run(
