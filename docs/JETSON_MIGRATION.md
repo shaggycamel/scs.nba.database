@@ -118,20 +118,44 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
 
 ## Decisions
 
-- **Engine/version:** PostgreSQL 15 or newer (Mac is 15.1; dump/restore works
-  upward, not down).
-- **Hosting:** Docker on the Jetson, pinned image, `restart: unless-stopped`.
-  Docker 29.1.3 is already there.
-- **Network:** LAN (`192.168.68.0/24`) and Tailscale only. No public port. HF has
-  no route by design.
-- **Roles:** owner/writer for the NUC and model runner; `kobe_public` with
-  `SELECT` on views for read clients. Apply `util.sql_grant` after views.
+- **Engine/version:** PostgreSQL 17 (Mac is 15.1; dump/restore works upward,
+  not down).
+- **Hosting:** `docker run` from `deploy/jetson/run.sh`, pinned to
+  `postgres:17`, `restart: unless-stopped`, container `nba-pg`, data in
+  `/srv/nba-pg`. The Jetson has no Compose v2 plugin, and one container does not
+  justify installing it.
+- **Network:** published on `127.0.0.1:5432` and `192.168.68.109:5432` only. No
+  public port, no Tailscale bind; HF has no route by design. Add a Tailscale
+  binding only if remote DB access is needed, and prefer an SSH tunnel.
+- **Roles:** `scs` (owner/writer, superuser inside the container) and
+  `kobe_public` (`LOGIN`, `NOSUPERUSER`, `default_transaction_read_only=on`,
+  `CONNECT` only). Column-level access to views comes from `util.sql_grant`
+  after the views are applied.
+- **Credentials:** `[jetson-write]` and `[jetson-read]` in
+  `~/.config/scs_hub_credentials.ini` on the Mac, NUC and Jetson. The Jetson's
+  copy points at `127.0.0.1`; the NUC and Mac use `192.168.68.109`.
 - **Time:** server and session `UTC`.
 - **Backups:** nightly `pg_dump -Fc` on the Jetson, copied to the NUC, then
   encrypted and pushed to the existing MEGA account with `rclone`. Details in
   [Backups](#backups).
 - **Storage:** eMMC, ~27 GB free. Data is ~1.5 GB; budget ~3 GB with bloat and
   tune autovacuum for the delete-then-append write pattern.
+
+### Provisioned 2026-11-13
+
+- `postgres:17` running as `nba-pg` on the Jetson, healthy, UTC, 7.5 MB empty
+  `nba` database.
+- `scs` and `kobe_public` created; `PUBLIC` connect revoked on the database.
+- `[jetson-write]` / `[jetson-read]` added on Mac, NUC and Jetson.
+- Verified from the NUC (`scs`) and from the Jetson (`scs` via `127.0.0.1`).
+- `~/nba-pg/.env` holds `POSTGRES_PASSWORD` (mode 600). `deploy/jetson/run.sh`
+  reads it and replaces the container without touching `/srv/nba-pg`.
+
+Known issue: Python and `psql` on the Mac get `EHOSTUNREACH` for
+`192.168.68.109:5432` while `nc` and SSH work. That is macOS Local Network
+permission, not Postgres. Grant the terminal app local-network access in System
+Settings → Privacy & Security. The NUC is the production client, so this blocks
+only Mac-side development.
 
 ## Making the Mac congruent
 
