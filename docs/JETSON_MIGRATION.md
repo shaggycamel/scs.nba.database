@@ -126,7 +126,8 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
   source of truth until a compose file replaces it.
 - **Network:** published on `127.0.0.1:5432`, `192.168.68.109:5432` and
   `100.76.153.9:5432` (Tailscale) only. No public port; HF has no route by
-  design. The NUC uses the LAN address, the Mac uses Tailscale.
+  design. The NUC uses the LAN address; the Mac uses the `jetson` alias,
+  which MagicDNS resolves to the Tailscale address.
 - **Roles:** `scs` (owner/writer, superuser inside the container) and
   `kobe_public` (`LOGIN`, `NOSUPERUSER`, `default_transaction_read_only=on`,
   `CONNECT` only). Column-level access to views comes from `util.sql_grant`
@@ -148,9 +149,9 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
 - `scs` and `kobe_public` created; `PUBLIC` connect revoked on the database.
 - `[jetson-write]` / `[jetson-read]` added on Mac, NUC and Jetson. The Jetson's
   copy points at `127.0.0.1`; the NUC uses `192.168.68.109`; the Mac uses
-  `100.76.153.9`.
+  `jetson` (MagicDNS).
 - Verified from the NUC (`scs`), the Jetson (`scs` via `127.0.0.1`) and the Mac
-  (`scs` and `kobe_public` via Tailscale).
+  (`scs` and `kobe_public` via the `jetson` alias).
 - Docker Compose v2.40.3 installed (`docker compose version`).
 - `~/scs-nba-pg/.env` holds `POSTGRES_PASSWORD` (mode 600).
   `deploy/jetson/run.sh` reads it and replaces the container without touching
@@ -158,7 +159,7 @@ rows; Cockroach has the newer snapshots. Not worth reconciling.
 
 Known issue: from the Mac, Python, `psql` and `curl` get `EHOSTUNREACH` for
 `192.168.68.109:5432`, while `nc` and SSH work. That is macOS Local Network
-permission, not Postgres, which is why the Mac uses the Tailscale address. The
+permission, not Postgres, which is why the Mac uses the `jetson` alias. The
 NUC is the production client and uses the LAN address without trouble.
 
 ## Making the Mac congruent
@@ -293,7 +294,7 @@ Run the check from the NUC: if the Jetson is down, the check still fires.
   unaffected. Toggling Local Network permission did not help. Next tests:
   reboot the Mac, then `tailscale down` and retry — the Tailscale network
   extension is the only one installed. Workaround already in place: the Mac's
-  `jetson-read`/`jetson-write` sections use `100.76.153.9`.
+  `jetson-read`/`jetson-write` sections use the `jetson` alias.
 - **Paired change required in `scs_hub`.** Cockroach carries the same 10
   duplicate `statyx.schedule` rows as the Mac. `StatyxPipeline.get_schedule`
   (`src/scs_hub/statyx.py:63`) replaces the season and writes the API frame
