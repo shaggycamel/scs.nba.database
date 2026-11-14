@@ -7,6 +7,8 @@ Cockroach.
 Status: **cut over**. Analytics reads and writes are on the Jetson; Cockroach
 remains the source of truth for customer data.
 
+Operational handover: [JETSON_CUTOVER_NOTES.md](JETSON_CUTOVER_NOTES.md).
+
 ## Progress
 
 Updated 2026-11-14. Detail lives in the sections below; this is the checklist.
