@@ -72,6 +72,12 @@ DRY_RUN=1 ~/shaggy_camel_sports/nba/database/deploy/backups/nuc_backup.sh
 ~/shaggy_camel_sports/nba/database/deploy/backups/check_backups.py --no-email
 ```
 
+Alert drill with a clearly labelled subject:
+
+```bash
+MAX_AGE_HOURS=0 ~/shaggy_camel_sports/nba/database/deploy/backups/check_backups.py --test
+```
+
 Then run one real upload and verify it appears:
 
 ```bash

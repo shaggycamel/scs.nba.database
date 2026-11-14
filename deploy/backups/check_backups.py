@@ -78,7 +78,7 @@ def newest_remote() -> datetime | None:
     return max(times) if times else None
 
 
-def send_alert(issues: list[str]) -> None:
+def send_alert(issues: list[str], test: bool = False) -> None:
     user = setting('SMTP_USER', 'smtp', 'user')
     password = setting('SMTP_PASSWORD', 'smtp', 'password')
     if not user or not password:
@@ -86,10 +86,11 @@ def send_alert(issues: list[str]) -> None:
         return
     recipient = setting('ALERT_TO', 'smtp', 'to') or user
     message = EmailMessage()
-    message['Subject'] = 'NBA backup check failed'
+    message['Subject'] = 'TEST: NBA backup check failed' if test else 'NBA backup check failed'
     message['From'] = user
     message['To'] = recipient
-    message.set_content('\n'.join(issues))
+    body = ['TEST ALERT — no action needed', '', *issues] if test else issues
+    message.set_content('\n'.join(body))
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
         server.starttls()
         server.login(user, password)
@@ -101,6 +102,7 @@ def main() -> int:
     argument_parser.add_argument(
         '--no-email', action='store_true', help='print the result but do not send mail'
     )
+    argument_parser.add_argument('--test', action='store_true', help='label the alert as a test')
     args = argument_parser.parse_args()
 
     issues = []
@@ -132,7 +134,7 @@ def main() -> int:
         print(f'FAIL: {issue}', file=sys.stderr)
     if not args.no_email:
         try:
-            send_alert(issues)
+            send_alert(issues, test=args.test)
         except Exception as exc:  # noqa: BLE001 - alert path must report, not mask
             print(f'could not send alert: {exc}', file=sys.stderr)
     return 1
