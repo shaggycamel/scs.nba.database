@@ -1,6 +1,6 @@
 # Jetson cutover notes
 
-Last updated: 2026-11-14 22:45 NZDT (09:45 UTC).
+Last updated: 2026-11-15 09:20 NZDT (2026-11-14 20:20 UTC).
 
 Status: **cut over**. Analytics reads and writes are on the Jetson. Cockroach
 remains authoritative for customer data.
@@ -93,7 +93,7 @@ This is the handover/ops record. The design and decision history is in
 | `nba.play_by_play` | 4,144,864 |
 | `nba.injuries` | 64,525 |
 | `statyx.schedule` | 6,479 |
-| `util.update_log` | 15,060 |
+| `util.update_log` | 15,088 |
 | `mod.injury_daily_forecast_base` | 2,072 |
 | `mod.player_archetype_base` | 3,039 |
 | `mod.team_hierarchy_base` | 7,557 |
@@ -118,7 +118,9 @@ unpaused (0/25).
 
 Branch state:
 
-- `nba/database`: NUC and Jetson are on `jetson-postgres-migration`.
+- `nba/database`: Mac, NUC and Jetson are on `main` (`645119c`).
+- `nba/fty/league_draft`: `main` (`75e1a6c`); the deploy default is
+  `NBA_DB_SOURCE=jetson-read`.
 - `nba/mod/_runner`: `main` (`4ec285c`).
 - `nba/mod/player_archetypes`: `main` (`347b687`).
 - `scs_hub`: `main` (`41e24f3`).
@@ -129,37 +131,26 @@ DBeaver connects directly over Tailscale to `100.76.153.9:5432`, database
 `nba`. Use `scs` for base tables and `kobe_public` for the view layer. The LAN
 address still fails from the Mac; Tailscale is the default.
 
-## Automatic checks still due (NZDT)
+## Verified scheduled runs (NZDT)
 
-Verified tonight:
+- [x] 20:00 — database intraday; 0 failures
+- [x] 21:05 — dashboard intraday; all four league builds succeeded
+- [x] 02:00 — daily database; 0 failures
+- [x] 03:15 — Jetson dump `nba-2026-11-14.dump` (145 MB)
+- [x] 03:45 — NUC sync and MEGA upload `nba-2026-11-14.dump.age`
+- [x] 04:15 — backup freshness check; local 5.8 h, MEGA 5.3 h
+- [x] 05:00 — intraday database; 0 failures
+- [x] 05:30 — dashboard daily, full `jetson-read` base; all leagues processed
 
-- [x] 20:00 — database intraday with `DB_CON=jetson-write`
-- [x] 21:05 — dashboard intraday with `NBA_DB_SECTION=jetson-read`; all four
-  league builds succeeded
-
-Overnight:
-
-- 02:00 — daily database run
-- 03:15 — Jetson backup dump
-- 03:45 — NUC sync and MEGA upload
-- 04:15 — backup freshness check
-- 05:00 — intraday database run
-- 05:30 — dashboard daily, full `jetson-read` base regeneration
-
-Review at 08:00–09:00 NZDT:
-
-- `util.update_log` on the Jetson: no failures after the cutover
-- `~/shaggy_camel_sports/nba/database/cron.log` on the NUC
-- `~/shaggy_camel_sports/nba/fty/league_dash/cron.log` on the NUC
-- `~/shaggy_camel_sports/nba/database/backup.log` and the MEGA daily listing
-- `util.update_schedule` still unpaused on the Jetson
+Next automatic runs: 11:00 database intraday, 11:05 dashboard intraday,
+11:45 model daily.
 
 ## Remaining work
 
-- [ ] Review the overnight logs at 08:00–09:00 NZDT.
-- [ ] Set `NBA_DB_SOURCE=jetson-read` for the next draft build.
-- [ ] Merge `jetson-postgres-migration` to `main` and switch NUC/Jetson
-  checkouts back to `main`.
+- [x] Review the overnight logs.
+- [x] Set `NBA_DB_SOURCE=jetson-read` for the draft deploy.
+- [x] Merge `jetson-postgres-migration` to `main` and switch the NUC/Jetson
+  checkouts.
 - [ ] Keep Cockroach analytics tables for the rollback window; drop them after a
   clean period.
 - [ ] Open items: Mac LAN access, `statyx.usage_shock` / `util.update_log`
