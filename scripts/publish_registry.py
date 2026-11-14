@@ -32,11 +32,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-section', default='jetson-write')
     parser.add_argument('--target-section', default='cockroach-write')
+    parser.add_argument('--source-db', help='override the source database name')
+    parser.add_argument('--target-db', help='override the target database name')
     parser.add_argument('--dry-run', action='store_true', help='read both sides but write nothing')
     args = parser.parse_args()
 
     source = Database(args.source_section)
     target = Database(args.target_section)
+    if args.source_db:
+        source.engine = sqlalchemy.create_engine(source.engine.url.set(database=args.source_db))
+    if args.target_db:
+        target.engine = sqlalchemy.create_engine(target.engine.url.set(database=args.target_db))
 
     frames = {}
     for table in TABLES:

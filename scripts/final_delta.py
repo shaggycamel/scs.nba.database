@@ -2,10 +2,11 @@
 
 Usage:
     uv run python scripts/final_delta.py --target-db nba_rehearsal
+    uv run python scripts/final_delta.py --target-section jetson-write
 
-The target must be a clone of ``nba_seed`` (or the seed itself). Small and
-rewritten tables are replaced outright; append-only tables are topped up.
-``util.player_identity_review`` is never touched.
+The target must be a clone of ``nba_seed``, the seed itself, or the Jetson.
+Small and rewritten tables are replaced outright; append-only tables are topped
+up. ``util.player_identity_review`` is never touched.
 """
 
 import argparse
@@ -63,13 +64,21 @@ def append_missing_games(src, tgt, table, game_ids):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--target-db', required=True)
+    parser.add_argument('--target-section', default='postgres')
+    parser.add_argument('--target-db', help='override the target database name')
     args = parser.parse_args()
 
+    if args.target_section == 'postgres' and not args.target_db:
+        raise SystemExit(
+            'refusing to target the local nba database; pass --target-db or a '
+            'non-postgres --target-section'
+        )
+
     src = Database('cockroach-write')
-    base = Database('postgres')
-    tgt = Database('postgres')
-    tgt.engine = sqlalchemy.create_engine(base.engine.url.set(database=args.target_db))
+    base = Database(args.target_section)
+    tgt = Database(args.target_section)
+    if args.target_db:
+        tgt.engine = sqlalchemy.create_engine(base.engine.url.set(database=args.target_db))
 
     # Rewritten nba tables. team_box_score comes first so the missing-game
     # checks below see the current game universe.
