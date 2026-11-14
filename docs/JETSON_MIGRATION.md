@@ -99,10 +99,13 @@ until a replication or publish path exists.
   the same `jetson-read` section.
 - Counts after the cycle: `nba.player_box_score` 597,038;
   `nba.play_by_play` 4,143,371; `nba.injuries` 64,525; `statyx.schedule` 6,479;
-  `mod.team_hierarchy_base` 7,557.
+  `mod.team_hierarchy_base` 7,557; `mod.player_archetype_base` 3,039.
 - The first model daily exposed a runner gap: it did not pass the database
-  section to remote jobs. Fixed in `cfdf266` and `4ec285c`; the rerun wrote to
-  `jetson-write`. Cockroach retains the pre-fix `mod` rows from that run.
+  section to remote jobs. Fixed in `cfdf266` and `4ec285c`. The weekly
+  archetype job then exposed the same gap inside its own subprocesses; fixed in
+  `347b687`. Reruns read and wrote `jetson-write`; the corrected archetype run
+  used data through 2026-11-13. Cockroach retains the pre-fix `mod` rows from
+  the earlier runs.
 - Cockroach's `util.update_schedule` rows remain paused for rollback. To roll
   back, unpause them and revert the NUC selectors to `cockroach-write` /
   `cockroach-read`; data written to the Jetson after the cutover would need a
