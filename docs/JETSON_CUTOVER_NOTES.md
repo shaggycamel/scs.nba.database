@@ -1,6 +1,6 @@
 # Jetson cutover notes
 
-Last updated: 2026-11-14 18:30 NZDT (05:30 UTC).
+Last updated: 2026-11-14 22:45 NZDT (09:45 UTC).
 
 Status: **cut over**. Analytics reads and writes are on the Jetson. Cockroach
 remains authoritative for customer data.
@@ -88,11 +88,12 @@ This is the handover/ops record. The design and decision history is in
 
 | Table | Rows |
 | --- | ---: |
-| `nba.player_box_score` | 597,038 |
-| `nba.play_by_play` | 4,143,371 |
+| `nba.player_box_score` | 597,111 |
+| `nba.team_box_score` | 45,781 |
+| `nba.play_by_play` | 4,144,864 |
 | `nba.injuries` | 64,525 |
 | `statyx.schedule` | 6,479 |
-| `util.update_log` | 15,033 |
+| `util.update_log` | 15,060 |
 | `mod.injury_daily_forecast_base` | 2,072 |
 | `mod.player_archetype_base` | 3,039 |
 | `mod.team_hierarchy_base` | 7,557 |
@@ -122,12 +123,19 @@ Branch state:
 - `nba/mod/player_archetypes`: `main` (`347b687`).
 - `scs_hub`: `main` (`41e24f3`).
 
-## What happens next (NZDT)
+## Access
 
-Tonight:
+DBeaver connects directly over Tailscale to `100.76.153.9:5432`, database
+`nba`. Use `scs` for base tables and `kobe_public` for the view layer. The LAN
+address still fails from the Mac; Tailscale is the default.
 
-- 20:00 — first database intraday with `DB_CON=jetson-write`
-- 21:05 — first dashboard build with `NBA_DB_SECTION=jetson-read`
+## Automatic checks still due (NZDT)
+
+Verified tonight:
+
+- [x] 20:00 — database intraday with `DB_CON=jetson-write`
+- [x] 21:05 — dashboard intraday with `NBA_DB_SECTION=jetson-read`; all four
+  league builds succeeded
 
 Overnight:
 
@@ -146,15 +154,16 @@ Review at 08:00–09:00 NZDT:
 - `~/shaggy_camel_sports/nba/database/backup.log` and the MEGA daily listing
 - `util.update_schedule` still unpaused on the Jetson
 
-Then:
+## Remaining work
 
-- Set `NBA_DB_SOURCE=jetson-read` for the next draft build.
-- Merge `jetson-postgres-migration` to `main` and switch NUC/Jetson checkouts
-  back to `main`.
-- Keep Cockroach analytics tables for the rollback window; drop them after a
+- [ ] Review the overnight logs at 08:00–09:00 NZDT.
+- [ ] Set `NBA_DB_SOURCE=jetson-read` for the next draft build.
+- [ ] Merge `jetson-postgres-migration` to `main` and switch NUC/Jetson
+  checkouts back to `main`.
+- [ ] Keep Cockroach analytics tables for the rollback window; drop them after a
   clean period.
-- Open items: Mac LAN access, `statyx.usage_shock` / `util.update_log` stable
-  id decision, `util.deps_saved_ddl`, legacy `pts`.
+- [ ] Open items: Mac LAN access, `statyx.usage_shock` / `util.update_log`
+  stable-id decision, `util.deps_saved_ddl`, legacy `pts`.
 
 ## Rollback
 
