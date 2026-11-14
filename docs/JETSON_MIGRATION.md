@@ -38,7 +38,7 @@ Updated 2026-11-14. Detail lives in the sections below; this is the checklist.
   applied `util.sql_grant`.
 - [x] Fixed `nba.play_by_play_vw` to join one schedule row per game
   (`4687aa2`).
-- [x] Added `.unique()` to `StatyxPipeline.get_schedule` in `scs_hub`
+- [x] Added `.unique()` to `StatyxComponent.get_schedule` in `scs_hub`
   (`41e24f3`) and pinned it in `nba/database` (`c8ea486`).
 - [x] Backups: Jetson nightly dump, NUC copy + age encryption, MEGA upload,
   freshness alert and restore drill verified; cron installed on both hosts.
