@@ -4,9 +4,8 @@ Working notes and plan for moving the analytics database from CockroachDB Cloud
 to a single PostgreSQL instance on the Jetson. The customer-facing slice stays on
 Cockroach.
 
-Status: **seeded and restored, not cut over**. Postgres 17 is running on the
-Jetson with a full copy of the database; Cockroach remains the source of truth
-for customer data.
+Status: **cut over**. Analytics reads and writes are on the Jetson; Cockroach
+remains the source of truth for customer data.
 
 ## Progress
 
@@ -42,19 +41,25 @@ Updated 2026-11-14. Detail lives in the sections below; this is the checklist.
   (`41e24f3`) and pinned it in `nba/database` (`c8ea486`).
 - [x] Backups: Jetson nightly dump, NUC copy + age encryption, MEGA upload,
   freshness alert and restore drill verified; cron installed on both hosts.
+- [x] Built and rehearsed `scripts/final_delta.py` and
+  `scripts/publish_registry.py` against a cloned Jetson database.
+- [x] Paused the Cockroach schedule, ran the final delta to the Jetson, flipped
+  the NUC selectors and unpaused the Jetson schedule.
+- [x] Ran daily, weekly and intraday database cycles plus the model daily
+  against the Jetson; all tasks succeeded. Published the registry back to
+  Cockroach.
+- [x] Fixed the model runner to pass `SCS_MOD_DB_SECTION` and `--db-con` to
+  remote model jobs (`cfdf266`, `4ec285c`).
 
 ### Left
 
-- [ ] Final delta from Cockroach to the Jetson at cutover.
-- [ ] Decide and implement the customer-data path: Cockroach remains the writer
-  for `fty.customer`, `fty.customer_league` and `util.draft_player_log`; the
-  Jetson copies are snapshots and will drift.
-- [ ] Flip selectors: `DB_CON`, `SCS_MOD_DB_SECTION`, `NBA_DB_SECTION`, draft
-  build `NBA_DB_SOURCE`. Entry and draft runtime stay on Cockroach.
-- [ ] Add the registry publish step (Jetson -> Cockroach for `fty.league`,
-  `fty.league_competitor`).
-- [ ] Cut over: pause the schedule, final delta, flip, one full cycle, unpause;
-  keep Cockroach for rollback.
+- [ ] Watch the first scheduled dashboard run with
+  `NBA_DB_SECTION=jetson-read` and the first draft build with
+  `NBA_DB_SOURCE=jetson-read`.
+- [ ] Merge `jetson-postgres-migration` to `main` and switch the NUC and Jetson
+  checkouts back.
+- [ ] Keep the Cockroach analytics tables for the rollback window; drop them
+  once the Jetson has run cleanly for a while.
 - [ ] Confirm `statyx.usage_shock` and `util.update_log` need no stable row id,
   and decide on `util.deps_saved_ddl` and the legacy `pts` repo.
 - [ ] Fix Mac access to the Jetson's LAN address (SSH works; direct Postgres
@@ -79,6 +84,26 @@ The seed includes `fty.customer`, `fty.customer_platform`,
 authoritative for customer data; the Jetson copies are snapshots and will drift
 until a replication or publish path exists.
 
+## Cutover (2026-11-14)
+
+- Paused all 25 `util.update_schedule` rows on Cockroach.
+- Ran `scripts/final_delta.py --target-section jetson-write`; the Jetson matched
+  the rehearsal.
+- Flipped the NUC cron selectors: `DB_CON=jetson-write`,
+  `SCS_MOD_DB_SECTION=jetson-write`, `NBA_DB_SECTION=jetson-read` and
+  `NBA_UPDATE_LOG_SECTION=jetson-write`.
+- Unpaused the Jetson schedule, then ran daily, weekly and intraday database
+  cycles plus the model daily. `util.update_log` recorded no failures.
+- Published `fty.league` and `fty.league_competitor` back to Cockroach.
+- `kobe_public` reads the Jetson views from the NUC; the dashboard build uses
+  the same `jetson-read` section.
+- Counts after the cycle: `nba.player_box_score` 597,038;
+  `nba.play_by_play` 4,143,371; `nba.injuries` 64,525; `statyx.schedule` 6,479;
+  `mod.team_hierarchy_base` 7,557.
+- The first model daily exposed a runner gap: it did not pass the database
+  section to remote jobs. Fixed in `cfdf266` and `4ec285c`; the rerun wrote to
+  `jetson-write`.
+
 ## Target shape
 
 | Stays on CockroachDB                            | Moves to Jetson Postgres |
@@ -93,6 +118,8 @@ until a replication or publish path exists.
 The 2026-11-14 seed is a full copy, so the customer tables and views are also
 present on the Jetson. They are not authoritative; Cockroach remains the writer
 for `fty.customer`, `fty.customer_league` and `util.draft_player_log`.
+`fty.league` and `fty.league_competitor` are written on the Jetson and published
+back to Cockroach for the entry app.
 
 `util.update_log` and `util.update_schedule` move with analytics. That keeps
 `nba/database` on a single connection (`hub.db`) and makes the NUC the only

@@ -65,7 +65,7 @@ leave the box.
 ```bash
 # 1. one-off: the system-wide config file
 mkdir -p ~/.config
-$EDITOR ~/.config/scs_hub_credentials.ini   # real creds, db_con = cockroach-write
+$EDITOR ~/.config/scs_hub_credentials.ini   # real creds, db_con = jetson-write
 chmod 600 ~/.config/scs_hub_credentials.ini
 
 # 2. build (repeat after every git pull)
@@ -78,8 +78,9 @@ docker build -t scs.nba.database:latest .
 ```
 
 `cron.sh` bind-mounts the config read-only at `/root/.config/scs_hub_credentials.ini`,
-so nothing secret is in the image. The run writes through the `[cockroach-write]` section
-(`cron.sh` sets `DB_CON=cockroach-write` unless the environment already sets it). It keeps
+so nothing secret is in the image. The deployed cron entries set
+`DB_CON=jetson-write`; `cron.sh` falls back to `cockroach-write` only when no
+override is supplied. It keeps
 the container after the run (no `--rm`) so `docker logs update_tables` works until the next
 run, and it propagates the exit status.
 
@@ -91,29 +92,37 @@ rather than shifting with NZ DST:
 
 ```cron
 # weekly, Monday 12:00 UTC (Tuesday 01:00 NZDT)
-0 12 * * 1      /home/oli/shaggy_camel_sports/nba/database/cron.sh weekly   >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+0 12 * * 1      DB_CON=jetson-write /home/oli/shaggy_camel_sports/nba/database/cron.sh weekly   >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
 # daily, 13:00 UTC (02:00 NZDT)
-0 13 * * *      /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+0 13 * * *      DB_CON=jetson-write /home/oli/shaggy_camel_sports/nba/database/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
 # intraday, 07,16,22 UTC (20:00, 05:00, 11:00 NZDT)
-0 7,16,22 * * * /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+0 7,16,22 * * * DB_CON=jetson-write /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
 # late intraday, 03:45 UTC (16:45 NZDT): the final lineup snapshot for the ET
 # game day, after the last game has started and before midnight ET.
-45 3 * * *      /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+45 3 * * *      DB_CON=jetson-write /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
+
+# registry publish, after the weekly fty jobs
+30 12 * * 1     /home/oli/shaggy_camel_sports/nba/database/.venv/bin/python /home/oli/shaggy_camel_sports/nba/database/scripts/publish_registry.py >> /home/oli/shaggy_camel_sports/nba/database/publish_registry.log 2>&1
 
 # league dash: daily 16:30 UTC (05:30 NZDT) regenerates the shared NBA base;
 # intraday 3x/day: 04:05,08:30,22:30 UTC (17:05, 21:30, 11:30 NZDT). The
 # 04:05 run follows the database's 03:45 final-lineup snapshot.
-30 16 * * *     PROVISION=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
-5 4,8,22 * * *  PROVISION=1 SKIP_BASE=1 /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
+30 16 * * *     PROVISION=1 NBA_DB_SECTION=jetson-read NBA_UPDATE_LOG_SECTION=jetson-write /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
+5 4,8,22 * * *  PROVISION=1 SKIP_BASE=1 NBA_DB_SECTION=jetson-read NBA_UPDATE_LOG_SECTION=jetson-write /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
 ```
 
-No environment setup needed — `cron.sh` reads `~/.config/scs_hub_credentials.ini` (or
-`SCS_HUB_CREDENTIALS`). The redirect captures the wrapper's output; the container's own
-logs are also available via `docker logs update_tables` until the next run. These entries
-are live on the NUC.
+The database entries read `util.update_schedule` and write through
+`[jetson-write]`; the dashboard reads `[jetson-read]` and logs to
+`[jetson-write]`. All sections live in `~/.config/scs_hub_credentials.ini` (or
+`SCS_HUB_CREDENTIALS`). The redirect captures the wrapper's output; the
+container's own logs are also available via `docker logs update_tables` until
+the next run. These entries are live on the NUC.
+
+The model runner's cron entries set `SCS_MOD_DB_SECTION=jetson-write` and pass
+`--db-con jetson-write` to each remote model repo.
 
 Run frequency is otherwise driven from the database: `util.update_schedule.cadence`
 selects which run picks up a row, and `util.update_schedule.pause` excludes it from
@@ -172,7 +181,9 @@ system of record).
 
 ## Deferred work
 
-None. The fty roster/division deploy and the 2026-27 schedule/injury repair
-were completed on 2026-10-28. See
+No ingestion work is deferred. The Jetson migration is cut over; see
+[JETSON_MIGRATION.md](docs/JETSON_MIGRATION.md) for the rollback window and
+remaining cleanup. The fty roster/division deploy and the 2026-27
+schedule/injury repair were completed on 2026-10-28; see
 [FTY_ROSTER_DIVISIONS_FOLLOWUP.md](FTY_ROSTER_DIVISIONS_FOLLOWUP.md) and
 [INJURY_GAME_ID_PLAN.md](INJURY_GAME_ID_PLAN.md) for the record.
