@@ -102,7 +102,11 @@ until a replication or publish path exists.
   `mod.team_hierarchy_base` 7,557.
 - The first model daily exposed a runner gap: it did not pass the database
   section to remote jobs. Fixed in `cfdf266` and `4ec285c`; the rerun wrote to
-  `jetson-write`.
+  `jetson-write`. Cockroach retains the pre-fix `mod` rows from that run.
+- Cockroach's `util.update_schedule` rows remain paused for rollback. To roll
+  back, unpause them and revert the NUC selectors to `cockroach-write` /
+  `cockroach-read`; data written to the Jetson after the cutover would need a
+  reverse copy.
 
 ## Target shape
 
