@@ -104,11 +104,11 @@ rather than shifting with NZ DST:
 # game day, after the last game has started and before midnight ET.
 45 3 * * *      DB_CON=jetson-write /home/oli/shaggy_camel_sports/nba/database/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/database/cron.log 2>&1
 
-# registry publish, after the weekly fty jobs
+# registry publish, after the weekly fty jobs (Tuesday 01:30 NZDT)
 30 12 * * 1     /home/oli/shaggy_camel_sports/nba/database/.venv/bin/python /home/oli/shaggy_camel_sports/nba/database/scripts/publish_registry.py >> /home/oli/shaggy_camel_sports/nba/database/publish_registry.log 2>&1
 
 # league dash: daily 16:30 UTC (05:30 NZDT) regenerates the shared NBA base;
-# intraday 3x/day: 04:05,08:30,22:30 UTC (17:05, 21:30, 11:30 NZDT). The
+# intraday 3x/day: 04:05,08:05,22:05 UTC (17:05, 21:05, 11:05 NZDT). The
 # 04:05 run follows the database's 03:45 final-lineup snapshot.
 30 16 * * *     PROVISION=1 NBA_DB_SECTION=jetson-read NBA_UPDATE_LOG_SECTION=jetson-write /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh daily    >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1
 5 4,8,22 * * *  PROVISION=1 SKIP_BASE=1 NBA_DB_SECTION=jetson-read NBA_UPDATE_LOG_SECTION=jetson-write /home/oli/shaggy_camel_sports/nba/fty/league_dash/deploy/cron.sh intraday >> /home/oli/shaggy_camel_sports/nba/fty/league_dash/cron.log 2>&1

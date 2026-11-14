@@ -127,7 +127,7 @@ Branch state:
 Tonight:
 
 - 20:00 — first database intraday with `DB_CON=jetson-write`
-- 21:30 — first dashboard build with `NBA_DB_SECTION=jetson-read`
+- 21:05 — first dashboard build with `NBA_DB_SECTION=jetson-read`
 
 Overnight:
 
