@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         '--db-con',
-        default='cockroach-write',
+        default='jetson-write',
         help="credentials.ini section (use 'postgres' locally)",
     )
     return parser.parse_args()

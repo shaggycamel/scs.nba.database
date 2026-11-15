@@ -5,10 +5,14 @@
 --
 -- This is the intended access contract, not a live snapshot. kobe_public reads
 -- views, plus the draft app's log table:
---   * 37 views across nba, fty, util and mod;
+--   * 57 views across nba, statyx, fty, util and mod;
 --   * util.draft_player_log, with SELECT, INSERT and DELETE, because the draft
 --     app reads, adds and removes picks. It is the only base table in the
 --     contract.
+--
+-- The statyx views are pass-throughs. They exist so read-only consumers can
+-- reach the Statyx-sourced tables at all: kobe_public has USAGE on the schema
+-- but no SELECT on any statyx base table.
 --
 -- Database.apply_sql_grant() reads this table and grants each row; keep it
 -- complete when views or the contract change. ai_tools and its 10 raw nba
@@ -16,11 +20,12 @@
 -- retired and dropped on 2026-11-13.
 --
 -- Owner only: do not GRANT SELECT on this table to kobe_public.
--- apply_sql_grant() runs as the owning role (fred through [cockroach-write] on
--- CockroachDB), so the owner already has access.
+-- apply_sql_grant() runs as the owning role (jetson-write on the Jetson, which
+-- holds the system of record), so the owner already has access.
 --
--- CockroachDB only: kobe_public does not exist in local Postgres, so this table
--- is not applied there. The Postgres form is at the bottom for reference.
+-- The table exists on the Jetson and on CockroachDB. Local Postgres has no
+-- kobe_public, so it is not applied there; the Postgres form is at the bottom
+-- for reference.
 --
 -- Re-running this file re-seeds the rows (DELETE then INSERT), so it is safe to
 -- apply repeatedly. A column change needs a rebuild, like the other tables in
@@ -60,6 +65,26 @@ VALUES
 ('kobe_public', 'nba', 'team_box_score_vw', 'view', 'SELECT'),
 ('kobe_public', 'nba', 'team_roster_vw', 'view', 'SELECT'),
 ('kobe_public', 'nba', 'teams_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'advanced_stats_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'assist_profile_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'contracts_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'defense_vs_position_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'drives_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'game_stats_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'matchup_history_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'play_type_defense_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'play_types_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'player_info_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'potential_assists_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'schedule_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'scoring_breakdown_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'shooting_splits_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'shot_zone_defense_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'shot_zones_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'standings_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'team_assist_defense_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'team_roster_vw', 'view', 'SELECT'),
+('kobe_public', 'statyx', 'usage_shock_vw', 'view', 'SELECT'),
 ('kobe_public', 'fty', 'base_vw', 'view', 'SELECT'),
 ('kobe_public', 'fty', 'categories_vw', 'view', 'SELECT'),
 ('kobe_public', 'fty', 'category_label_vw', 'view', 'SELECT'),
@@ -91,8 +116,8 @@ VALUES
 COMMIT;
 
 -- Verify after seeding. Expect: DELETE util table 1; INSERT util table 1;
--- SELECT fty view 14; SELECT mod view 6; SELECT nba view 12; SELECT util table 1;
--- SELECT util view 5.
+-- SELECT fty view 14; SELECT mod view 6; SELECT nba view 12; SELECT statyx
+-- view 20; SELECT util table 1; SELECT util view 5.
 --
 -- SELECT privilege, schema, relation_type, count(*) AS n
 -- FROM util.sql_grant
@@ -117,5 +142,5 @@ COMMIT;
 -- INSERT INTO util.sql_grant
 --     (grantee, schema, table_name, relation_type, privilege)
 -- VALUES
---     ...same 36 rows as above...
+--     ...same rows as above...
 -- COMMIT;

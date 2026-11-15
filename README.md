@@ -174,7 +174,9 @@ uvx ruff check __main__.py
 hand — not part of the scheduled run, and not in the image. `scripts/apply_views.py` applies
 every `sql/views/<schema>/*_vw.sql` in dependency order
 (`nba`, `statyx`, `fty`, `util`, `mod`) and applies the `util.sql_grant` allowlist; model views
-are applied by `nba/mod/_runner` after each model run. `scripts/transport.py` mirrors one
+are applied by `nba/mod/_runner` after each model run. The statyx views are pass-throughs —
+they are the only way a read-only consumer reaches the Statyx tables, since `kobe_public` holds
+no SELECT on the base tables. `scripts/transport.py` mirrors one
 season between the two databases named at its top — neither is in the image.
 `sql/` holds view, function and table DDL for reference (hand-applied; the database is the
 system of record).
