@@ -23,7 +23,7 @@ CONFIG_FILE="${SCS_HUB_CREDENTIALS:-$HOME/.config/scs_hub_credentials.ini}"
 
 # Credentials section __main__.py writes through (a write-capable section). Passed
 # as the DB_CON override rather than an ini key, so the same file serves everywhere.
-DB_CON="${DB_CON:-cockroach-write}"
+DB_CON="${DB_CON:-jetson-write}"
 export DB_CON
 
 # util.update_log.source: this repo's name, from the checkout's origin (survives

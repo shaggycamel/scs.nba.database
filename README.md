@@ -37,7 +37,7 @@ file scs-hub reads for its DB and platform credentials. Set `SCS_HUB_CREDENTIALS
 point at a different path instead; both `__main__.py` and scs-hub honour it. Create the
 file `chmod 600` and never commit it (it lives outside the repo).
 
-It holds the DB/platform sections scs-hub expects (`[cockroach-write]`/`[postgres]`,
+It holds the DB/platform sections scs-hub expects (`[jetson-write]`/`[postgres]`,
 `[statyx]`, `[espn_api]`, `[yahoo_api]`) plus this repo's `[runtime]` and `[smtp]` sections.
 
 A direct `python __main__.py` reads the same file, so no `cd` or working-directory setup is
@@ -55,7 +55,7 @@ an interactive console. Without `[smtp] user` + `password` the failure email is 
 and the run simply exits 1.
 
 The local `~/.config` file should point at `[runtime] db_con = postgres` so a stray local
-run cannot write to cockroach.
+run cannot write to production.
 
 ## Deploying to the NUC
 
@@ -79,7 +79,7 @@ docker build -t scs.nba.database:latest .
 
 `cron.sh` bind-mounts the config read-only at `/root/.config/scs_hub_credentials.ini`,
 so nothing secret is in the image. The deployed cron entries set
-`DB_CON=jetson-write`; `cron.sh` falls back to `cockroach-write` only when no
+`DB_CON=jetson-write`; `cron.sh` falls back to `jetson-write` when no
 override is supplied. It keeps
 the container after the run (no `--rm`) so `docker logs update_tables` works until the next
 run, and it propagates the exit status.

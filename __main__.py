@@ -11,7 +11,7 @@ scs-hub reads for its DB and platform credentials). It resolves, in order, from
 SCS_HUB_CREDENTIALS or ~/.config/scs_hub_credentials.ini:
 
     [runtime]
-    db_con = cockroach
+    db_con = jetson-write
 
     [smtp]
     user = alerts@gmail.com
@@ -76,7 +76,7 @@ DB_CON = setting('DB_CON', 'runtime', 'db_con')
 if not DB_CON:
     raise RuntimeError(
         f'No database connection configured. Add a [runtime] section with '
-        f'db_con = cockroach (or postgres) to {INI_PATH}, or set DB_CON in the '
+        f'db_con = jetson-write (or postgres) to {INI_PATH}, or set DB_CON in the '
         'environment. Either must name a section of that same file.'
     )
 
