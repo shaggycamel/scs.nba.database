@@ -31,6 +31,8 @@ SELECT
     -- Appended rather than inserted: CREATE OR REPLACE VIEW cannot change the
     -- name or position of an existing column, only add one at the end.
     b.expected_usage_model,
-    b.expected_usage_events
+    b.expected_usage_events,
+    b.p_play_source,
+    b.p_play_injury
 FROM mod.team_hierarchy_base b
 LEFT JOIN util.player_id_map_vw nm ON nm.nba_id = b.player_id;
