@@ -173,8 +173,11 @@ uvx ruff check __main__.py
 `scripts/manual_update.py` is a REPL scratchpad for running individual `hub.*` calls by
 hand — not part of the scheduled run, and not in the image. `scripts/apply_views.py` applies
 every `sql/views/<schema>/*_vw.sql` in dependency order
-(`nba`, `statyx`, `fty`, `util`, `mod`) and applies the `util.sql_grant` allowlist; model views
-are applied by `nba/mod/_runner` after each model run. The statyx views are pass-throughs —
+(`nba`, `statyx`, `fty`, `util`, `mod`) and applies the `util.sql_grant` allowlist. Views are
+DDL, not job output: apply them when their files change, with `./deploy/apply_views.sh`
+(or `./deploy/apply_views.sh --schema mod` for the model views) from the NUC checkout. The
+model runner only writes base tables. A new model table follows the same order: create the
+base table, apply its view, then let the publisher run. The statyx views are pass-throughs —
 they are the only way a read-only consumer reaches the Statyx tables, since `kobe_public` holds
 no SELECT on the base tables. `scripts/transport.py` mirrors one
 season between the two databases named at its top — neither is in the image.
