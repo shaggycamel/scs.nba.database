@@ -5,7 +5,7 @@
 --
 -- This is the intended access contract, not a live snapshot. kobe_public reads
 -- views, plus the draft app's log table:
---   * 57 views across nba, statyx, fty, util and mod;
+--   * 58 views across nba, statyx, fty, util and mod;
 --   * util.draft_player_log, with SELECT, INSERT and DELETE, because the draft
 --     app reads, adds and removes picks. It is the only base table in the
 --     contract.
@@ -112,6 +112,7 @@ VALUES
 ('kobe_public', 'mod', 'player_archetype_model_vw', 'view', 'SELECT'),
 ('kobe_public', 'mod', 'player_archetype_profile_vw', 'view', 'SELECT'),
 ('kobe_public', 'mod', 'player_archetype_vw', 'view', 'SELECT'),
+('kobe_public', 'mod', 'player_stat_forecast_vw', 'view', 'SELECT'),
 ('kobe_public', 'mod', 'team_hierarchy_vw', 'view', 'SELECT');
 COMMIT;
 
