@@ -1,10 +1,10 @@
 -- The day-of contract: one row per player per upcoming fixture.
 --
--- Only unplayed games from today onward. Availability is the report when one
--- exists for that game date (`report_available`), otherwise the injury-
--- duration curve (`p_play_source = 'injury'`), otherwise the hierarchy's own
--- state-only probability. `p_play_injury` is null when the player has no
--- active spell or the report already covers the game.
+-- Only unplayed games from the previous Eastern date onward. Availability is
+-- the report when one exists for that game date (`report_available`),
+-- otherwise the injury-duration curve (`p_play_source = 'injury'`), otherwise
+-- the hierarchy's own state-only probability. `p_play_injury` is null when the
+-- player has no active spell or the report already covers the game.
 --
 -- The injury context is the latest published spell row; it is a snapshot as of
 -- the latest report, not a per-game forecast.
@@ -60,4 +60,7 @@ LEFT JOIN LATERAL (
 ) i ON TRUE
 LEFT JOIN mod.player_archetype_current_base a ON a.player_id = h.player_id
 WHERE s.team_winner IS NULL
-  AND h.game_date >= current_date;
+  -- The NBA day is Eastern, not UTC: a UTC cutoff drops the evening slate at
+  -- tip-off. Keep the previous Eastern date so the current slate survives the
+  -- midnight rollover.
+  AND h.game_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'America/New_York')::date - 1;
