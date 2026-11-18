@@ -59,9 +59,10 @@ FROM util.update_schedule_old;
 
 -- Seed the model rows. The copy above preserves any row already present; this
 -- keeps a fresh rebuild from dropping them. Only the rows with a dependency
--- carry a function_sequence: injury must publish the availability curve
--- before team_hierarchy reads it. NULL sorts last, so the unsequenced weekly
--- archetypes row runs after both without needing a number.
+-- carry a function_sequence: injury publishes the availability curve before
+-- team_hierarchy reads it, and player_stats reads the hierarchy's horizon.
+-- NULL sorts last, so the unsequenced weekly archetypes row runs after all
+-- three without needing a number.
 --
 -- Deployment order: the cadence moves to 'intraday' only after the NUC crontab
 -- runs `_runner/cron.sh intraday` at 16:15 and 22:15. Until then the live rows
@@ -77,11 +78,20 @@ WHERE NOT EXISTS (
 
 INSERT INTO util.update_schedule
     (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
-SELECT 'model', 'mod', 'team_hierarchy', 'scs.nba.mod.team_hierarchy', 'intraday', NULL, NULL, FALSE
+SELECT 'model', 'mod', 'team_hierarchy', 'scs.nba.mod.team_hierarchy', 'intraday', NULL, 2, FALSE
 WHERE NOT EXISTS (
     SELECT 1 FROM util.update_schedule
     WHERE job_family = 'model'
       AND associated_function = 'scs.nba.mod.team_hierarchy'
+);
+
+INSERT INTO util.update_schedule
+    (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
+SELECT 'model', 'mod', 'player_stat_forecast', 'scs.nba.mod.player_stats', 'intraday', NULL, 3, FALSE
+WHERE NOT EXISTS (
+    SELECT 1 FROM util.update_schedule
+    WHERE job_family = 'model'
+      AND associated_function = 'scs.nba.mod.player_stats'
 );
 
 INSERT INTO util.update_schedule
