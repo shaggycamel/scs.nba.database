@@ -44,6 +44,5 @@ SELECT
     l.archetype_description
 FROM mod.player_archetype_base b
 LEFT JOIN util.player_id_map_vw nm ON nm.nba_id = b.player_id
-LEFT JOIN mod.player_archetype_lookup_base l
-    ON l.model_version = b.model_version
-   AND l.archetype_label = b.archetype_label;
+LEFT JOIN mod.player_archetype_description_base l
+    ON l.archetype_label = b.archetype_label;

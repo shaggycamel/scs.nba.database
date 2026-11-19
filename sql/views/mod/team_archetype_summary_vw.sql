@@ -31,6 +31,5 @@ SELECT
     b.generated_at,
     l.archetype_description
 FROM mod.team_archetype_summary_base b
-LEFT JOIN mod.player_archetype_lookup_base l
-    ON l.model_version = b.model_version
-   AND l.archetype_label = b.archetype;
+LEFT JOIN mod.player_archetype_description_base l
+    ON l.archetype_label = b.archetype;
