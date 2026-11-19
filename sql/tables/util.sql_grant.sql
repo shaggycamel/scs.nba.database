@@ -111,11 +111,12 @@ VALUES
 ('kobe_public', 'mod', 'injury_daily_forecast_vw', 'view', 'SELECT'),
 ('kobe_public', 'mod', 'player_archetype_vw', 'view', 'SELECT'),
 ('kobe_public', 'mod', 'player_stat_forecast_vw', 'view', 'SELECT'),
+('kobe_public', 'mod', 'team_archetype_summary_vw', 'view', 'SELECT'),
 ('kobe_public', 'mod', 'team_hierarchy_vw', 'view', 'SELECT');
 COMMIT;
 
 -- Verify after seeding. Expect: DELETE util table 1; INSERT util table 1;
--- SELECT fty view 14; SELECT mod view 5; SELECT nba view 12; SELECT statyx
+-- SELECT fty view 14; SELECT mod view 6; SELECT nba view 12; SELECT statyx
 -- view 20; SELECT util table 1; SELECT util view 5.
 --
 -- SELECT privilege, schema, relation_type, count(*) AS n
