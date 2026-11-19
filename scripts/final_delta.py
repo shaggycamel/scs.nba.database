@@ -222,9 +222,6 @@ def main() -> None:
     for table in (
         'injury_daily_forecast_base',
         'player_archetype_base',
-        'player_archetype_current_base',
-        'player_archetype_model_base',
-        'player_archetype_profile_base',
         'team_hierarchy_base',
     ):
         replace_full(src, tgt, 'mod', table)

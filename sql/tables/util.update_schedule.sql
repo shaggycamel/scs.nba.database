@@ -96,7 +96,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO util.update_schedule
     (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
-SELECT 'model', 'mod', 'player_archetypes', 'scs.nba.mod.player_archetypes', 'weekly', NULL, NULL, FALSE
+SELECT 'model', 'mod', 'player_archetypes', 'scs.nba.mod.player_archetypes', 'intraday', NULL, 0, FALSE
 WHERE NOT EXISTS (
     SELECT 1 FROM util.update_schedule
     WHERE job_family = 'model'
@@ -128,7 +128,7 @@ COMMIT;
 -- FROM util.update_schedule_old;
 -- INSERT INTO util.update_schedule
 --     (job_family, schema, table_name, associated_function, cadence, schema_sequence, function_sequence, pause)
--- SELECT 'model', 'mod', 'player_archetypes', 'scs.nba.mod.player_archetypes', 'weekly', NULL, NULL, FALSE
+-- SELECT 'model', 'mod', 'player_archetypes', 'scs.nba.mod.player_archetypes', 'intraday', NULL, 0, FALSE
 -- WHERE NOT EXISTS (
 --     SELECT 1 FROM util.update_schedule
 --     WHERE job_family = 'model'

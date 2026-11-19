@@ -251,10 +251,6 @@ CREATE INDEX player_archetype_base_player_date_ix
 CREATE INDEX player_archetype_base_season_ix
     ON mod.player_archetype_base (season, game_id, player_id);
 
-ALTER TABLE mod.player_archetype_current_base ADD PRIMARY KEY (player_id);
-ALTER TABLE mod.player_archetype_model_base ADD PRIMARY KEY (model_cutoff);
-ALTER TABLE mod.player_archetype_profile_base ADD PRIMARY KEY (archetype_label);
-
 ALTER TABLE mod.team_hierarchy_base
     ADD PRIMARY KEY (game_date, game_id, team_id, player_id);
 

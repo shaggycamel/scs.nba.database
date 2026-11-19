@@ -1,5 +1,7 @@
--- Public read-only view over the private model table. player_name is the
--- conformed name from util.player_id_map_vw; raw_name is the model's stored name.
+-- Public read-only view over the private assignment table. player_name is the
+-- conformed name from util.player_id_map_vw; raw_name is the model's stored
+-- name. features_through is the last game that fed the assignment, so a
+-- consumer can measure staleness without guessing from the run date.
 CREATE OR REPLACE VIEW mod.player_archetype_vw AS
 SELECT
     b.game_id,
@@ -10,6 +12,10 @@ SELECT
     b.season,
     b.team_abbreviation,
     b.prior_games,
+    b.features_through,
+    b.model_version,
+    b.model_cutoff,
+    b.model_checksum,
     b.archetype_label,
     b.archetype_confidence,
     b.archetype_entropy,
@@ -31,12 +37,9 @@ SELECT
     b.r_fg3a_share,
     b.r_fga_per_min,
     b.r_ftr,
-    b.r_min,
     b.r_oreb_pct,
     b.r_pf_per_min,
-    b.r_start_rate,
     b.r_stl_per_min,
-    b.r_tov_pct,
-    b.model_cutoff
+    b.r_tov_pct
 FROM mod.player_archetype_base b
 LEFT JOIN util.player_id_map_vw nm ON nm.nba_id = b.player_id;

@@ -58,7 +58,15 @@ LEFT JOIN LATERAL (
     ORDER BY f.prediction_date DESC
     LIMIT 1
 ) i ON TRUE
-LEFT JOIN mod.player_archetype_current_base a ON a.player_id = h.player_id
+LEFT JOIN LATERAL (
+    SELECT
+        p.archetype_label,
+        p.archetype_confidence
+    FROM mod.player_archetype_base p
+    WHERE p.player_id = h.player_id
+    ORDER BY p.game_date DESC
+    LIMIT 1
+) a ON TRUE
 WHERE s.team_winner IS NULL
   -- The NBA day is Eastern, not UTC: a UTC cutoff drops the evening slate at
   -- tip-off. Keep the previous Eastern date so the current slate survives the
