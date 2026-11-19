@@ -222,6 +222,7 @@ def main() -> None:
     for table in (
         'injury_daily_forecast_base',
         'player_archetype_base',
+        'player_archetype_lookup_base',
         'team_archetype_summary_base',
         'team_hierarchy_base',
     ):

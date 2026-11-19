@@ -40,6 +40,10 @@ SELECT
     b.r_oreb_pct,
     b.r_pf_per_min,
     b.r_stl_per_min,
-    b.r_tov_pct
+    b.r_tov_pct,
+    l.archetype_description
 FROM mod.player_archetype_base b
-LEFT JOIN util.player_id_map_vw nm ON nm.nba_id = b.player_id;
+LEFT JOIN util.player_id_map_vw nm ON nm.nba_id = b.player_id
+LEFT JOIN mod.player_archetype_lookup_base l
+    ON l.model_version = b.model_version
+   AND l.archetype_label = b.archetype_label;
