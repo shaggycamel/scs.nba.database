@@ -7,7 +7,9 @@
 --
 -- Every stat is conditional on the player taking the floor. `minutes_if_plays`
 -- is the exposure; `expected_minutes` includes the DNP zeros and is carried
--- only for context. Multiply by `p_play` to form an ex-ante expected value.
+-- only for context. `expected_usage` is the usage context the stat heads
+-- consumed: the dedicated hierarchy usage head when published, otherwise the
+-- legacy layer-4 value. Multiply by `p_play` to form an ex-ante expected value.
 CREATE OR REPLACE VIEW mod.player_stat_forecast_vw AS
 WITH latest AS (
     SELECT
@@ -51,6 +53,7 @@ SELECT
     pred_reb,
     model_version,
     model_cutoff,
-    generated_at
+    generated_at,
+    stats_model_version
 FROM latest
 WHERE rn = 1;
